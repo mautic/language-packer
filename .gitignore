@@ -13,3 +13,6 @@
 
 # Temp storage for downloaded resources #
 /translations
+
+# Storage for completed packages #
+/packages

@@ -70,6 +70,7 @@ class Application extends AbstractCliApplication
 		$username       = $this->get('transifex.username');
 		$password       = $this->get('transifex.password');
 		$completion     = $this->get('transifex.completion', 80);
+		$packagesDir    = JPATH_ROOT . '/packages';
 		$translationDir = JPATH_ROOT . '/translations';
 
 		if (!$username || !$password)
@@ -159,5 +160,65 @@ class Application extends AbstractCliApplication
 				}
 			}
 		}
+
+		// Now we start building our ZIP archives
+		if (!is_dir($packagesDir))
+		{
+			if (!Folder::create($packagesDir))
+			{
+				throw new \RuntimeException(
+					'Failed creating root packages folder.  Please verify your filesystem permissions and try again.'
+				);
+			}
+		}
+
+		if (!is_dir($packagesDir . '/' . $version))
+		{
+			if (!Folder::create($packagesDir . '/' . $version))
+			{
+				throw new \RuntimeException(
+					sprintf(
+						'Failed creating packages folder for version "%s".  Please verify your filesystem permissions and try again.',
+						$version
+					)
+				);
+			}
+		}
+
+		chdir($translationDir);
+
+		foreach (Folder::folders($translationDir) as $languageDir)
+		{
+			$this->runCommand('zip -r ' . $packagesDir . '/' . $version . '/' . $languageDir . '-' . $version . '.zip ' . $languageDir . '/ > /dev/null');
+		}
+
+		$this->out(sprintf('<info>Successfully created language packages for Mautic version %s!</info>', $version));
+	}
+
+	/**
+	 * Execute a command on the server.
+	 *
+	 * @param   string  $command  The command to execute.
+	 *
+	 * @return  string  Return data from the command
+	 *
+	 * @throws  \RuntimeException
+	 */
+	public function runCommand($command)
+	{
+		$lastLine = system($command, $status);
+
+		if ($status)
+		{
+			// Command exited with a status != 0
+			if ($lastLine)
+			{
+				throw new \RuntimeException($lastLine);
+			}
+
+			throw new \RuntimeException(sprintf('Unknown error executing "%s" command', $command));
+		}
+
+		return $lastLine;
 	}
 }
