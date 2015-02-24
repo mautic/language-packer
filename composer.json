@@ -1,0 +1,25 @@
+{
+    "name": "mautic/language-packager",
+    "description": "Creates language packages for Mautic releases",
+    "license": "GPL-2.0+",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Michael Babker",
+            "homepage": "https://www.mautic.org"
+        }
+    ],
+    "require": {
+        "php": ">=5.4",
+        "joomla/application": "~1.3",
+        "joomla/filesystem": "~1.2",
+        "joomla/input": "~1.2",
+        "joomla/registry": "~1.4",
+        "babdev/transifex": "~1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Mautic\\": "src/"
+        }
+    }
+}

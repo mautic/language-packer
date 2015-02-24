@@ -1,0 +1,34 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Mautic Language Packager
+ *
+ * @copyright  Copyright (C) 2015 Allyde, LLC. All rights reserved.
+ * @license    http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License Version 2 or Later
+ */
+
+// Application constants
+define('JPATH_ROOT', dirname(__DIR__));
+
+// Load the Composer autoloader
+if (!file_exists(JPATH_ROOT . '/vendor/autoload.php'))
+{
+	fwrite(STDOUT, "Composer is not set up properly, please run 'composer install'.\n");
+
+	exit;
+}
+
+require JPATH_ROOT . '/vendor/autoload.php';
+
+// Execute the application
+try
+{
+	(new Mautic\Application)->execute();
+}
+catch (\Exception $e)
+{
+	fwrite(STDOUT, "\nERROR: " . $e->getMessage() . "\n");
+	fwrite(STDOUT, "\n" . $e->getTraceAsString() . "\n");
+
+	exit($e->getCode() ? : 255);
+}
