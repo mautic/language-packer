@@ -11,6 +11,7 @@ namespace Mautic;
 use BabDev\Transifex\Transifex;
 use Joomla\Application\AbstractCliApplication;
 use Joomla\Filesystem\Folder;
+use Joomla\Http\HttpFactory;
 use Joomla\Registry\Registry;
 
 /**
@@ -191,6 +192,27 @@ class Application extends AbstractCliApplication
 		{
 			$this->runCommand('zip -r ' . $packagesDir . '/' . $version . '/' . $languageDir . '-' . $version . '.zip ' . $languageDir . '/ > /dev/null');
 		}
+
+		// Compile our data to forward to mautic.org
+		$langData = [];
+
+		foreach ($project->teams as $langCode)
+		{
+			$txLangData = $transifex->languageinfo->getLanguage($langCode);
+
+			$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code, 'version' => $version];
+		}
+
+		// Store the lang data as a backup
+		file_put_contents($packagesDir . '/' . $version . '.txt', json_encode($langData));
+
+		$connector = HttpFactory::getHttp();
+
+		$connector->post(
+			'https://www.mautic.org/index.php?option=com_mauticdownload&task=addLanguages',
+			['languageData' => $langData],
+			['Mautic-Token' => $this->get('mautic.token')]
+		);
 
 		$this->out(sprintf('<info>Successfully created language packages for Mautic version %s!</info>', $version));
 	}

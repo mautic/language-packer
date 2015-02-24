@@ -3,5 +3,8 @@
         "username": "",
         "password": "",
         "completion": 80
+    },
+    "mautic": {
+        "token": "ChangeMe"
     }
 }

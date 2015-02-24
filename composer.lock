@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "d9830cec0aa86c1ca8045df11c8b802c",
+    "hash": "f1af81d59d1f67eb0def3297c4114a20",
     "packages": [
         {
             "name": "babdev/transifex",
