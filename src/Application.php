@@ -186,21 +186,29 @@ class Application extends AbstractCliApplication
 			}
 		}
 
+		// Compile our data to forward to mautic.org and build the ZIP packages
 		chdir($translationDir);
+		$langData = [];
 
 		foreach (Folder::folders($translationDir) as $languageDir)
 		{
-			$this->runCommand('zip -r ' . $packagesDir . '/' . $version . '/' . $languageDir . '-' . $version . '.zip ' . $languageDir . '/ > /dev/null');
-		}
+			// If the directory is empty, there is no point in packaging it
+			if (count(scandir($translationDir . '/' . $languageDir)) > 2)
+			{
+				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
-		// Compile our data to forward to mautic.org
-		$langData = [];
+				$txLangData = $transifex->languageinfo->getLanguage($languageDir);
+				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code, 'version' => $version];
+				$configData = $this->renderConfig(
+					['name' => $txLangData->name, 'locale' => $txLangData->code, 'author' => 'Mautic Translators']
+				);
 
-		foreach ($project->teams as $langCode)
-		{
-			$txLangData = $transifex->languageinfo->getLanguage($langCode);
+				file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData);
 
-			$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code, 'version' => $version];
+				$this->runCommand(
+					'zip -r ' . $packagesDir . '/' . $version . '/' . $languageDir . '-' . $version . '.zip ' . $languageDir . '/ > /dev/null'
+				);
+			}
 		}
 
 		// Store the lang data as a backup
@@ -215,6 +223,48 @@ class Application extends AbstractCliApplication
 		);
 
 		$this->out(sprintf('<info>Successfully created language packages for Mautic version %s!</info>', $version));
+	}
+
+	/**
+	 * Renders the translation package configuration
+	 *
+	 * @param   array  $data  Data array to render
+	 *
+	 * @return  string
+	 */
+	private function renderConfig(array $data)
+	{
+		$string = "<?php\n";
+		$string .= "\$config = array(\n";
+
+		foreach ($data as $key => $value)
+		{
+			if ($value !== '')
+			{
+				if (is_string($value))
+				{
+					$value = "'$value'";
+				}
+				elseif (is_bool($value))
+				{
+					$value = ($value) ? 'true' : 'false';
+				}
+				elseif (is_null($value))
+				{
+					$value = 'null';
+				}
+				elseif (is_array($value))
+				{
+					$value = $this->renderArray($value);
+				}
+
+				$string .= "\t'$key' => $value,\n";
+			}
+		}
+
+		$string .= ");\n\nreturn \$config;";
+
+		return $string;
 	}
 
 	/**
