@@ -55,19 +55,6 @@ class Application extends AbstractCliApplication
 	 */
 	protected function doExecute()
 	{
-		// If a --version option wasn't given, prompt the user
-		if (!($version = $this->input->getString('version')))
-		{
-			$this->out('Please specify the Mautic version these packages are for.');
-			$version = trim($this->in());
-		}
-
-		// Don't bother if we don't have a version string (really, even just 'M' will do!)
-		if (!$version)
-		{
-			throw new \InvalidArgumentException('Must specify version number.');
-		}
-
 		$username       = $this->get('transifex.username');
 		$password       = $this->get('transifex.password');
 		$completion     = $this->get('transifex.completion', 80);
@@ -173,17 +160,14 @@ class Application extends AbstractCliApplication
 			}
 		}
 
-		if (!is_dir($packagesDir . '/' . $version))
+		// Add a folder for our current build
+		$timestamp = (new \DateTime())->format('YmdHis');
+
+		if (!Folder::create($packagesDir . '/' . $timestamp))
 		{
-			if (!Folder::create($packagesDir . '/' . $version))
-			{
-				throw new \RuntimeException(
-					sprintf(
-						'Failed creating packages folder for version "%s".  Please verify your filesystem permissions and try again.',
-						$version
-					)
-				);
-			}
+			throw new \RuntimeException(
+				'Failed creating packages folder for this build.  Please verify your filesystem permissions and try again.'
+			);
 		}
 
 		// Compile our data to forward to mautic.org and build the ZIP packages
@@ -198,7 +182,7 @@ class Application extends AbstractCliApplication
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
 				$txLangData = $transifex->languageinfo->getLanguage($languageDir);
-				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code, 'version' => $version];
+				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code];
 				$configData = $this->renderConfig(
 					['name' => $txLangData->name, 'locale' => $txLangData->code, 'author' => 'Mautic Translators']
 				);
@@ -206,13 +190,13 @@ class Application extends AbstractCliApplication
 				file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData);
 
 				$this->runCommand(
-					'zip -r ' . $packagesDir . '/' . $version . '/' . $languageDir . '-' . $version . '.zip ' . $languageDir . '/ > /dev/null'
+					'zip -r ' . $packagesDir . '/' . $timestamp . '/' . $languageDir . '.zip ' . $languageDir . '/ > /dev/null'
 				);
 			}
 		}
 
 		// Store the lang data as a backup
-		file_put_contents($packagesDir . '/' . $version . '.txt', json_encode($langData));
+		file_put_contents($packagesDir . '/' . $timestamp . '.txt', json_encode($langData));
 
 		$connector = HttpFactory::getHttp();
 
@@ -222,7 +206,7 @@ class Application extends AbstractCliApplication
 			['Mautic-Token' => $this->get('mautic.token')]
 		);
 
-		$this->out(sprintf('<info>Successfully created language packages for Mautic version %s!</info>', $version));
+		$this->out('<info>Successfully created language packages for Mautic!</info>');
 	}
 
 	/**
