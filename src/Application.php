@@ -114,8 +114,8 @@ class Application extends AbstractCliApplication
 
 				$completed = str_replace('%', '', $stats->completed);
 
-				// We only want resources which are 80% completed unless told to bypass the completion check
-				if ($this->input->getBool('bypasscompletion', false) || $completed >= 80)
+				// We only want resources which match our minimum completion level unless told to bypass the completion check
+				if ($this->input->getBool('bypasscompletion', false) || $completed >= $completion)
 				{
 					$translation = $transifex->translations->getTranslation('mautic', $resource->slug, $language);
 
