@@ -4,6 +4,13 @@
         "password": "",
         "completion": 80
     },
+    "amazon": {
+        "key": "",
+        "secret": "",
+        "region": "",
+        "bucket": "mautic",
+        "ownerId": ""
+    },
     "mautic": {
         "token": "ChangeMe"
     }

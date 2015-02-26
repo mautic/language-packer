@@ -17,8 +17,7 @@
         "joomla/input": "~1.2",
         "joomla/registry": "~1.4",
         "babdev/transifex": "~1.0",
-        "aws/aws-sdk-php": "3.*@dev",
-        "league/flysystem-aws-s3-v3": "~1.0"
+        "aws/aws-sdk-php": "~2.7"
     },
     "autoload": {
         "psr-4": {
