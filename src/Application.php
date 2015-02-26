@@ -8,11 +8,7 @@
 
 namespace Mautic;
 
-use Aws\CloudFront\Exception\Exception;
 use Aws\Common\Credentials\Credentials;
-use Aws\S3\Enum\Group;
-use Aws\S3\Enum\Permission;
-use Aws\S3\Model\AcpBuilder;
 use Aws\S3\S3Client;
 use BabDev\Transifex\Transifex;
 use Joomla\Application\AbstractCliApplication;
@@ -221,16 +217,6 @@ class Application extends AbstractCliApplication
 				'region' => $this->get('amazon.region')
 			]);
 
-			// Build our ACL object - This sets the owner with the right permissions and allows public read access to download
-			$acp = AcpBuilder::newInstance()
-				->setOwner($this->get('amazon.ownerId'))
-				->addGrantForUser(Permission::READ, $this->get('amazon.ownerId'))
-				->addGrantForUser(Permission::READ_ACP, $this->get('amazon.ownerId'))
-				->addGrantForUser(Permission::WRITE, $this->get('amazon.ownerId'))
-				->addGrantForUser(Permission::WRITE_ACP, $this->get('amazon.ownerId'))
-				->addGrantForGroup('READ', Group::ALL_USERS)
-				->build();
-
 			// Remove our existing objects and upload fresh items
 			$client->deleteMatchingObjects($this->get('amazon.bucket'), 'languages/');
 
@@ -240,7 +226,7 @@ class Application extends AbstractCliApplication
 					'Bucket' => $this->get('amazon.bucket'),
 					'Key' => 'languages/' . $package,
 					'SourceFile' => $packagesDir . '/' . $timestamp . '/' . $package,
-					'ACP' => $acp
+					'ACL' => 'public-read'
 				]);
 			}
 

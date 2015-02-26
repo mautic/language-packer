@@ -8,8 +8,7 @@
         "key": "",
         "secret": "",
         "region": "",
-        "bucket": "mautic",
-        "ownerId": ""
+        "bucket": "mautic"
     },
     "mautic": {
         "token": "ChangeMe"
