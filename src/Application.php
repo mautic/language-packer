@@ -56,6 +56,7 @@ class Application extends AbstractCliApplication
 
 		parent::__construct(null, $config);
 	}
+
 	/**
 	 * Debugs a language file
 	 *
@@ -133,12 +134,12 @@ class Application extends AbstractCliApplication
 		// Check if we encountered any errors.
 		if (count($errors))
 		{
-			$this->errorfiles[$filename] = $filename . ' - error(s) in line(s) ' . implode(', ', $errors);
+			$this->errorFiles[$filename] = $filename . ' - error(s) in line(s) ' . implode(', ', $errors);
 		}
 		elseif ($php_errormsg)
 		{
 			// We didn't find any errors but there's probably a parse notice.
-			$this->errorfiles['PHP' . $filename] = 'PHP parser errors -' . $php_errormsg;
+			$this->errorFiles['PHP' . $filename] = 'PHP parser errors -' . $php_errormsg;
 		}
 
 		return count($errors);
