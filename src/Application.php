@@ -324,15 +324,15 @@ class Application extends AbstractCliApplication
 				'region' => $this->get('amazon.region')
 			]);
 
-			// Remove our existing objects and upload fresh items
-			$client->deleteMatchingObjects($this->get('amazon.bucket'), 'languages/');
-
 			foreach (Folder::files($packagesDir . '/' . $timestamp) as $package)
 			{
 				if ($languageFilter && $languageFilter != $package)
 				{
 					continue;
 				}
+
+				// Remove our existing objects and upload fresh items
+				$client->deleteMatchingObjects($this->get('amazon.bucket'), 'languages/' . $package);
 
 				$client->putObject([
 					'Bucket' => $this->get('amazon.bucket'),
