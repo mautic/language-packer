@@ -62,6 +62,7 @@ class Application extends AbstractCliApplication
 		$completion     = $this->get('transifex.completion', 80);
 		$packagesDir    = JPATH_ROOT . '/packages';
 		$translationDir = JPATH_ROOT . '/translations';
+		$languageFilter = $this->input->get('language', null);
 
 		if (!$username || !$password)
 		{
@@ -108,6 +109,12 @@ class Application extends AbstractCliApplication
 			{
 				// Skip our default language
 				if ($language == 'en')
+				{
+					continue;
+				}
+
+				// If we are filtering on a specific language, skip anything that doesn't match
+				if ($languageFilter && $languageFilter != $language)
 				{
 					continue;
 				}
@@ -222,6 +229,11 @@ class Application extends AbstractCliApplication
 
 			foreach (Folder::files($packagesDir . '/' . $timestamp) as $package)
 			{
+				if ($languageFilter && $languageFilter != $package)
+				{
+					continue;
+				}
+
 				$client->putObject([
 					'Bucket' => $this->get('amazon.bucket'),
 					'Key' => 'languages/' . $package,
