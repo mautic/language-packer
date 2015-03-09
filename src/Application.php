@@ -122,6 +122,15 @@ class Application extends AbstractCliApplication
 				continue;
 			}
 
+			// Check for unescaped quotes
+			preg_match_all('/\"*[^\\"]*[\"\n](?=(?:[^\\"]*[^\"]*")*[^"]*$)/', $line, $matches);
+
+			if (count($matches[0]) > 2)
+			{
+				$errors[] = $realNumber;
+				continue;
+			}
+
 			// Check that the key is not in the blacklist.
 			$key = strtoupper(trim(substr($line, 0, strpos($line, '='))));
 
