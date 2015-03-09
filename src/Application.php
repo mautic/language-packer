@@ -24,6 +24,13 @@ use Joomla\Registry\Registry;
 class Application extends AbstractCliApplication
 {
 	/**
+	 * List of language files that are in error state
+	 *
+	 * @var  array
+	 */
+	private $errorFiles = [];
+
+	/**
 	 * Constructor
 	 */
 	public function __construct()
@@ -49,6 +56,93 @@ class Application extends AbstractCliApplication
 
 		parent::__construct(null, $config);
 	}
+	/**
+	 * Debugs a language file
+	 *
+	 * @param   string  $filename  Absolute path to the file to debug
+	 *
+	 * @return  integer  A count of the number of parsing errors
+	 *
+	 * @throws  \InvalidArgumentException
+	 */
+	private function debugFile($filename)
+	{
+		// Make sure our file actually exists
+		if (!file_exists($filename))
+		{
+			throw new \InvalidArgumentException(
+				sprintf('Unable to locate file "%s" for debugging', $filename)
+			);
+		}
+
+		// Initialise variables for manually parsing the file for common errors.
+		$blacklist = array('YES', 'NO', 'NULL', 'FALSE', 'ON', 'OFF', 'NONE', 'TRUE');
+		$errors = array();
+		$php_errormsg = null;
+
+		// Open the file as a stream.
+		$file = new \SplFileObject($filename);
+
+		foreach ($file as $lineNumber => $line)
+		{
+			// Avoid BOM error as BOM is OK when using parse_ini.
+			if ($lineNumber == 0)
+			{
+				$line = str_replace("\xEF\xBB\xBF", '', $line);
+			}
+
+			$line = trim($line);
+
+			// Ignore comment lines.
+			if (!strlen($line) || $line['0'] == ';')
+			{
+				continue;
+			}
+
+			// Ignore grouping tag lines, like: [group]
+			if (preg_match('#^\[[^\]]*\](\s*;.*)?$#', $line))
+			{
+				continue;
+			}
+
+			$realNumber = $lineNumber + 1;
+
+			// Check for odd number of double quotes.
+			if (substr_count($line, '"') % 2 != 0)
+			{
+				$errors[] = $realNumber;
+				continue;
+			}
+
+			// Check that the line passes the necessary format.
+			if (!preg_match('#^[A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*".*"(\s*;.*)?$#', $line))
+			{
+				$errors[] = $realNumber;
+				continue;
+			}
+
+			// Check that the key is not in the blacklist.
+			$key = strtoupper(trim(substr($line, 0, strpos($line, '='))));
+
+			if (in_array($key, $blacklist))
+			{
+				$errors[] = $realNumber;
+			}
+		}
+
+		// Check if we encountered any errors.
+		if (count($errors))
+		{
+			$this->errorfiles[$filename] = $filename . ' - error(s) in line(s) ' . implode(', ', $errors);
+		}
+		elseif ($php_errormsg)
+		{
+			// We didn't find any errors but there's probably a parse notice.
+			$this->errorfiles['PHP' . $filename] = 'PHP parser errors -' . $php_errormsg;
+		}
+
+		return count($errors);
+	}
 
 	/**
 	 * {@inheritdoc}
@@ -63,6 +157,7 @@ class Application extends AbstractCliApplication
 		$packagesDir    = JPATH_ROOT . '/packages';
 		$translationDir = JPATH_ROOT . '/translations';
 		$languageFilter = $this->input->get('language', null);
+		$debugLanguages = $this->input->getBool('debuglanguages', false);
 
 		if (!$username || !$password)
 		{
@@ -153,6 +248,11 @@ class Application extends AbstractCliApplication
 								$path
 							)
 						);
+					}
+
+					if ($debugLanguages)
+					{
+						$this->debugFile($path);
 					}
 				}
 			}
@@ -245,6 +345,18 @@ class Application extends AbstractCliApplication
 			$this->out('<info>Successfully uploaded language packages</info>');
 		}
 
+		if ($debugLanguages && !empty($this->errorFiles))
+		{
+			if (!file_put_contents($translationDir . '/errors.txt', json_encode($this->errorFiles, JSON_PRETTY_PRINT)))
+			{
+				throw new \RuntimeException(
+					sprintf(
+						'Failed writing translation file "%s".  Please verify your filesystem permissions and try again.',
+						$translationDir . '/errors.txt'
+					)
+				);
+			}
+		}
 		$this->out('<info>Successfully created language packages for Mautic!</info>');
 	}
 

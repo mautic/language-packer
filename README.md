@@ -22,3 +22,7 @@ By default, this script checks for a minimum completion level of a resource befo
 A single language may be processed by passing the `--language` option, e.g. `bin/execute --language=es`.
 
 To upload packages, you must pass the `--uploadpackages` option when executing the script.  The `amazon` settings must be configured prior to this.  The Amazon Web Services account must have permissions to create, edit, and delete objects (and their associated ACL settings) on your S3 instance.
+
+### Debugging Files
+
+There is a simple debugger included in the application to try and find potential parse errors in downloaded language files.  This can be triggered with the `--debuglanguages` option, e.g. `bin/execute --debuglanguages`.
