@@ -1,23 +1,23 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
     "hash": "50e0b6f46eddf4c3178e8fec16ee9012",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "2.8.0",
+            "version": "2.8.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "526a52732b11154aa937ec1e160668d7f7b83afc"
+                "reference": "ec34eddcff0b7385afdb474ce3705580f7116294"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/526a52732b11154aa937ec1e160668d7f7b83afc",
-                "reference": "526a52732b11154aa937ec1e160668d7f7b83afc",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/ec34eddcff0b7385afdb474ce3705580f7116294",
+                "reference": "ec34eddcff0b7385afdb474ce3705580f7116294",
                 "shasum": ""
             },
             "require": {
@@ -71,7 +71,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2015-04-09 18:58:17"
+            "time": "2015-05-18 23:19:07"
         },
         {
             "name": "babdev/transifex",
@@ -404,16 +404,16 @@
         },
         {
             "name": "joomla/http",
-            "version": "1.1.6",
+            "version": "1.1.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/joomla-framework/http.git",
-                "reference": "63e98b274943143e96276c7dbd2ff66ec47f3031"
+                "reference": "4f28aa1351afd1f8dc9a65236690320cc5de8ab1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/joomla-framework/http/zipball/63e98b274943143e96276c7dbd2ff66ec47f3031",
-                "reference": "63e98b274943143e96276c7dbd2ff66ec47f3031",
+                "url": "https://api.github.com/repos/joomla-framework/http/zipball/4f28aa1351afd1f8dc9a65236690320cc5de8ab1",
+                "reference": "4f28aa1351afd1f8dc9a65236690320cc5de8ab1",
                 "shasum": ""
             },
             "require": {
@@ -451,7 +451,7 @@
                 "http",
                 "joomla"
             ],
-            "time": "2015-03-05 11:45:34"
+            "time": "2015-05-03 16:09:17"
         },
         {
             "name": "joomla/input",
@@ -726,17 +726,17 @@
         },
         {
             "name": "symfony/event-dispatcher",
-            "version": "v2.6.6",
+            "version": "v2.6.7",
             "target-dir": "Symfony/Component/EventDispatcher",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "70f7c8478739ad21e3deef0d977b38c77f1fb284"
+                "reference": "672593bc4b0043a0acf91903bb75a1c82d8f2e02"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/70f7c8478739ad21e3deef0d977b38c77f1fb284",
-                "reference": "70f7c8478739ad21e3deef0d977b38c77f1fb284",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/672593bc4b0043a0acf91903bb75a1c82d8f2e02",
+                "reference": "672593bc4b0043a0acf91903bb75a1c82d8f2e02",
                 "shasum": ""
             },
             "require": {
@@ -771,17 +771,17 @@
             ],
             "authors": [
                 {
-                    "name": "Symfony Community",
-                    "homepage": "http://symfony.com/contributors"
-                },
-                {
                     "name": "Fabien Potencier",
                     "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
                 }
             ],
             "description": "Symfony EventDispatcher Component",
-            "homepage": "http://symfony.com",
-            "time": "2015-03-13 17:37:22"
+            "homepage": "https://symfony.com",
+            "time": "2015-05-02 15:18:45"
         }
     ],
     "packages-dev": [],
