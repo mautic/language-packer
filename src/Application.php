@@ -186,7 +186,7 @@ class Application extends AbstractCliApplication
 		$txOptions = ['api.username' => $username, 'api.password' => $password];
 		$transifex = new Transifex($txOptions);
 
-		$project = $transifex->projects->getProject('mautic', true);
+		$project = $transifex->get('projects')->getProject('mautic', true);
 
 		// Build folders for each team's translations
 		foreach ($project->teams as $team)
@@ -208,7 +208,7 @@ class Application extends AbstractCliApplication
 			// Split the name to create our file name
 			list ($bundle, $file) = explode(' ', $resource->name);
 
-			$languageStats = $transifex->statistics->getStatistics('mautic', $resource->slug);
+			$languageStats = $transifex->get('statistics')->getStatistics('mautic', $resource->slug);
 
 			foreach ($languageStats as $language => $stats)
 			{
@@ -231,7 +231,7 @@ class Application extends AbstractCliApplication
 				// We only want resources which match our minimum completion level unless told to bypass the completion check
 				if ($this->input->getBool('bypasscompletion', false) || $completed >= $completion)
 				{
-					$translation = $transifex->translations->getTranslation('mautic', $resource->slug, $language);
+					$translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $language);
 
 					$path = $translationDir . '/' . $language . '/' . $bundle . '/' . $file . '.ini';
 
@@ -300,7 +300,7 @@ class Application extends AbstractCliApplication
 			{
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
-				$txLangData = $transifex->languageinfo->getLanguage($languageDir);
+				$txLangData = $transifex->get('languageinfo')->getLanguage($languageDir);
 				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code];
 				$configData = $this->renderConfig(
 					['name' => $txLangData->name, 'locale' => $txLangData->code, 'author' => 'Mautic Translators']
