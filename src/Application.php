@@ -320,7 +320,7 @@ class Application extends AbstractCliApplication
 		$connector = HttpFactory::getHttp();
 
 		$connector->post(
-			'https://www.mautic.org/index.php?option=com_mauticdownload&task=addLanguages',
+			'https://updates.mautic.org/index.php?option=com_mauticdownload&task=addLanguages',
 			['languageData' => $langData],
 			['Mautic-Token' => $this->get('mautic.token')]
 		);
