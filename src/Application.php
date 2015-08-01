@@ -77,8 +77,8 @@ class Application extends AbstractCliApplication
 		}
 
 		// Initialise variables for manually parsing the file for common errors.
-		$blacklist = array('YES', 'NO', 'NULL', 'FALSE', 'ON', 'OFF', 'NONE', 'TRUE');
-		$errors = array();
+		$blacklist = ['YES', 'NO', 'NULL', 'FALSE', 'ON', 'OFF', 'NONE', 'TRUE'];
+		$errors = [];
 		$php_errormsg = null;
 
 		// Open the file as a stream.
@@ -384,27 +384,7 @@ class Application extends AbstractCliApplication
 
 		foreach ($data as $key => $value)
 		{
-			if ($value !== '')
-			{
-				if (is_string($value))
-				{
-					$value = "'$value'";
-				}
-				elseif (is_bool($value))
-				{
-					$value = ($value) ? 'true' : 'false';
-				}
-				elseif (is_null($value))
-				{
-					$value = 'null';
-				}
-				elseif (is_array($value))
-				{
-					$value = $this->renderArray($value);
-				}
-
-				$string .= "\t'$key' => $value,\n";
-			}
+			$string .= "\t'$key' => '$value',\n";
 		}
 
 		$string .= ");\n\nreturn \$config;";
