@@ -306,7 +306,15 @@ class Application extends AbstractCliApplication
 					['name' => $txLangData->name, 'locale' => $txLangData->code, 'author' => 'Mautic Translators']
 				);
 
-				file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData);
+				if (!file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData))
+				{
+					throw new \RuntimeException(
+						sprintf(
+							'Failed writing translation package configuration file "%s".  Please verify your filesystem permissions and try again.',
+							$translationDir . '/' . $languageDir . '/config.php'
+						)
+					);
+				}
 
 				$this->runCommand(
 					'zip -r ' . $packagesDir . '/' . $timestamp . '/' . $languageDir . '.zip ' . $languageDir . '/ > /dev/null'
@@ -315,7 +323,7 @@ class Application extends AbstractCliApplication
 		}
 
 		// Store the lang data as a backup
-		file_put_contents($packagesDir . '/' . $timestamp . '.txt', json_encode($langData));
+		file_put_contents($packagesDir . '/' . $timestamp . '.txt', json_encode($langData, JSON_PRETTY_PRINT));
 
 		$connector = HttpFactory::getHttp();
 
@@ -352,7 +360,7 @@ class Application extends AbstractCliApplication
 				]);
 			}
 
-			$this->out('<info>Successfully uploaded language packages</info>');
+			$this->out('Successfully uploaded language packages');
 		}
 
 		if ($debugLanguages && !empty($this->errorFiles))
@@ -361,13 +369,14 @@ class Application extends AbstractCliApplication
 			{
 				throw new \RuntimeException(
 					sprintf(
-						'Failed writing translation file "%s".  Please verify your filesystem permissions and try again.',
+						'Failed writing translation errors file "%s".  Please verify your filesystem permissions and try again.',
 						$translationDir . '/errors.txt'
 					)
 				);
 			}
 		}
-		$this->out('<info>Successfully created language packages for Mautic!</info>');
+
+		$this->out('Successfully created language packages for Mautic!');
 	}
 
 	/**
