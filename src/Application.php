@@ -419,10 +419,10 @@ class Application extends AbstractCliApplication
 			// Command exited with a status != 0
 			if ($lastLine)
 			{
-				throw new \RuntimeException($lastLine);
+				throw new \RuntimeException($lastLine, $status);
 			}
 
-			throw new \RuntimeException(sprintf('Unknown error executing "%s" command', $command));
+			throw new \RuntimeException(sprintf('Unknown error executing "%s" command', $command), $status);
 		}
 
 		return $lastLine;
