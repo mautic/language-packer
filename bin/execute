@@ -30,5 +30,12 @@ catch (\Exception $e)
 	fwrite(STDOUT, "\nERROR: " . $e->getMessage() . "\n");
 	fwrite(STDOUT, "\n" . $e->getTraceAsString() . "\n");
 
-	exit($e->getCode() ? : 255);
+	// If there's a previous Exception, let's throw that out too
+	if ($e->getPrevious())
+	{
+		fwrite(STDOUT, "\n\nPrevious Exception: " . $e->getPrevious()->getMessage() . "\n");
+		fwrite(STDOUT, "\n" . $e->getPrevious()->getTraceAsString() . "\n");
+	}
+
+	exit(1);
 }
