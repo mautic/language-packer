@@ -7,6 +7,12 @@
  * @license    http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License Version 2 or Later
  */
 
+// Define New Relic application name
+if (extension_loaded('newrelic'))
+{
+	newrelic_set_appname('Mautic Language Packager');
+}
+
 // Application constants
 define('JPATH_ROOT', dirname(__DIR__));
 

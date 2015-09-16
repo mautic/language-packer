@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "2.8.14",
+            "version": "2.8.20",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "cc3f63f695e15e4b1e6ee0e090c32bfde78115a4"
+                "reference": "e01825efad025dbe6d88997e02bd32ec80814381"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/cc3f63f695e15e4b1e6ee0e090c32bfde78115a4",
-                "reference": "cc3f63f695e15e4b1e6ee0e090c32bfde78115a4",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/e01825efad025dbe6d88997e02bd32ec80814381",
+                "reference": "e01825efad025dbe6d88997e02bd32ec80814381",
                 "shasum": ""
             },
             "require": {
@@ -67,7 +67,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2015-07-14 20:48:28"
+            "time": "2015-09-03 22:25:15"
         },
         {
             "name": "babdev/transifex",
@@ -218,16 +218,16 @@
         },
         {
             "name": "joomla/application",
-            "version": "1.4.0",
+            "version": "1.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/joomla-framework/application.git",
-                "reference": "185b68fe55537281385b637a90e11856ea01c8da"
+                "reference": "5825e9fd60681aa77644be85f7eefc8ea3e98285"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/joomla-framework/application/zipball/185b68fe55537281385b637a90e11856ea01c8da",
-                "reference": "185b68fe55537281385b637a90e11856ea01c8da",
+                "url": "https://api.github.com/repos/joomla-framework/application/zipball/5825e9fd60681aa77644be85f7eefc8ea3e98285",
+                "reference": "5825e9fd60681aa77644be85f7eefc8ea3e98285",
                 "shasum": ""
             },
             "require": {
@@ -270,7 +270,7 @@
                 "framework",
                 "joomla"
             ],
-            "time": "2015-03-06 17:37:01"
+            "time": "2015-07-17 22:26:06"
         },
         {
             "name": "joomla/compat",
@@ -311,22 +311,31 @@
         },
         {
             "name": "joomla/filesystem",
-            "version": "1.2.0",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/joomla-framework/filesystem.git",
-                "reference": "31884adf5470baf14de74bfd36482fd18ae048ad"
+                "reference": "e306a6df707ac0b03e2f13c41c2c9c5b72f00b39"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/joomla-framework/filesystem/zipball/31884adf5470baf14de74bfd36482fd18ae048ad",
-                "reference": "31884adf5470baf14de74bfd36482fd18ae048ad",
+                "url": "https://api.github.com/repos/joomla-framework/filesystem/zipball/e306a6df707ac0b03e2f13c41c2c9c5b72f00b39",
+                "reference": "e306a6df707ac0b03e2f13c41c2c9c5b72f00b39",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.10"
             },
+            "require-dev": {
+                "phpunit/phpunit": "4.*",
+                "squizlabs/php_codesniffer": "1.*"
+            },
             "type": "joomla-package",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.x-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Joomla\\Filesystem\\": "src/",
@@ -344,34 +353,33 @@
                 "framework",
                 "joomla"
             ],
-            "time": "2014-04-10 02:54:58"
+            "time": "2015-09-05 16:01:03"
         },
         {
             "name": "joomla/filter",
-            "version": "1.1.5",
+            "version": "1.1.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/joomla-framework/filter.git",
-                "reference": "ed6d695a81e71508782ab8d711498c684465b041"
+                "reference": "b3114bb10b6f58019f4f038cdb7d6da8b94eb584"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/joomla-framework/filter/zipball/ed6d695a81e71508782ab8d711498c684465b041",
-                "reference": "ed6d695a81e71508782ab8d711498c684465b041",
+                "url": "https://api.github.com/repos/joomla-framework/filter/zipball/b3114bb10b6f58019f4f038cdb7d6da8b94eb584",
+                "reference": "b3114bb10b6f58019f4f038cdb7d6da8b94eb584",
                 "shasum": ""
             },
             "require": {
+                "joomla/string": "~1.3",
                 "php": ">=5.3.10"
             },
             "require-dev": {
                 "joomla/language": "~1.0",
-                "joomla/string": "~1.0",
                 "phpunit/phpunit": "4.*",
                 "squizlabs/php_codesniffer": "1.*"
             },
             "suggest": {
-                "joomla/language": "Required only if you want to use `OutputFilter::stringURLSafe`.",
-                "joomla/string": "Required only if you want to use `OutputFilter::stringURLSafe` and `OutputFilter::stringURLUnicodeSlug`."
+                "joomla/language": "Required only if you want to use `OutputFilter::stringURLSafe`."
             },
             "type": "joomla-package",
             "extra": {
@@ -396,7 +404,7 @@
                 "framework",
                 "joomla"
             ],
-            "time": "2014-12-12 21:46:44"
+            "time": "2015-07-23 13:26:12"
         },
         {
             "name": "joomla/http",
@@ -553,16 +561,16 @@
         },
         {
             "name": "joomla/string",
-            "version": "1.3.0",
+            "version": "1.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/joomla-framework/string.git",
-                "reference": "0df8ead8c726a1f648e624d3bcbef8cf05c1d0da"
+                "reference": "1a61294f887a95ec3eb2e4dac12ba18ab6b2bf5a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/joomla-framework/string/zipball/0df8ead8c726a1f648e624d3bcbef8cf05c1d0da",
-                "reference": "0df8ead8c726a1f648e624d3bcbef8cf05c1d0da",
+                "url": "https://api.github.com/repos/joomla-framework/string/zipball/1a61294f887a95ec3eb2e4dac12ba18ab6b2bf5a",
+                "reference": "1a61294f887a95ec3eb2e4dac12ba18ab6b2bf5a",
                 "shasum": ""
             },
             "require": {
@@ -596,7 +604,7 @@
                 "joomla",
                 "string"
             ],
-            "time": "2015-03-26 01:02:20"
+            "time": "2015-05-03 16:08:20"
         },
         {
             "name": "joomla/uri",
@@ -722,16 +730,16 @@
         },
         {
             "name": "symfony/event-dispatcher",
-            "version": "v2.7.2",
+            "version": "v2.7.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "9310b5f9a87ec2ea75d20fec0b0017c77c66dac3"
+                "reference": "b58c916f1db03a611b72dd702564f30ad8fe83fa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/9310b5f9a87ec2ea75d20fec0b0017c77c66dac3",
-                "reference": "9310b5f9a87ec2ea75d20fec0b0017c77c66dac3",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/b58c916f1db03a611b72dd702564f30ad8fe83fa",
+                "reference": "b58c916f1db03a611b72dd702564f30ad8fe83fa",
                 "shasum": ""
             },
             "require": {
@@ -776,7 +784,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "https://symfony.com",
-            "time": "2015-06-18 19:21:56"
+            "time": "2015-08-24 07:13:45"
         }
     ],
     "packages-dev": [],
