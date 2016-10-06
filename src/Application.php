@@ -8,6 +8,8 @@
 
 namespace Mautic;
 
+use Aws\Common\Credentials\Credentials;
+use Aws\S3\S3Client;
 use BabDev\Transifex\Transifex;
 use Joomla\Application\AbstractCliApplication;
 use Joomla\Filesystem\Folder;
@@ -21,6 +23,13 @@ use Joomla\Registry\Registry;
  */
 class Application extends AbstractCliApplication
 {
+	/**
+	 * List of language files that are in error state
+	 *
+	 * @var  array
+	 */
+	private $errorFiles = [];
+
 	/**
 	 * Constructor
 	 */
@@ -49,30 +58,116 @@ class Application extends AbstractCliApplication
 	}
 
 	/**
+	 * Debugs a language file
+	 *
+	 * @param   string  $filename  Absolute path to the file to debug
+	 *
+	 * @return  integer  A count of the number of parsing errors
+	 *
+	 * @throws  \InvalidArgumentException
+	 */
+	private function debugFile($filename)
+	{
+		// Make sure our file actually exists
+		if (!file_exists($filename))
+		{
+			throw new \InvalidArgumentException(
+				sprintf('Unable to locate file "%s" for debugging', $filename)
+			);
+		}
+
+		// Initialise variables for manually parsing the file for common errors.
+		$blacklist = ['YES', 'NO', 'NULL', 'FALSE', 'ON', 'OFF', 'NONE', 'TRUE'];
+		$errors = [];
+		$php_errormsg = null;
+
+		// Open the file as a stream.
+		$file = new \SplFileObject($filename);
+
+		foreach ($file as $lineNumber => $line)
+		{
+			// Avoid BOM error as BOM is OK when using parse_ini.
+			if ($lineNumber == 0)
+			{
+				$line = str_replace("\xEF\xBB\xBF", '', $line);
+			}
+
+			$line = trim($line);
+
+			// Ignore comment lines.
+			if (!strlen($line) || $line['0'] == ';')
+			{
+				continue;
+			}
+
+			// Ignore grouping tag lines, like: [group]
+			if (preg_match('#^\[[^\]]*\](\s*;.*)?$#', $line))
+			{
+				continue;
+			}
+
+			$realNumber = $lineNumber + 1;
+
+			// Check for odd number of double quotes.
+			if (substr_count($line, '"') % 2 != 0)
+			{
+				$errors[] = $realNumber;
+				continue;
+			}
+
+			// Check that the line passes the necessary format.
+			if (!preg_match('#^[A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*".*"(\s*;.*)?$#', $line))
+			{
+				$errors[] = $realNumber;
+				continue;
+			}
+
+			// Check for unescaped quotes
+			preg_match_all('/\"*[^\\"]*[\"\n](?=(?:[^\\"]*[^\"]*")*[^"]*$)/', $line, $matches);
+
+			if (count($matches[0]) > 2)
+			{
+				$errors[] = $realNumber;
+				continue;
+			}
+
+			// Check that the key is not in the blacklist.
+			$key = strtoupper(trim(substr($line, 0, strpos($line, '='))));
+
+			if (in_array($key, $blacklist))
+			{
+				$errors[] = $realNumber;
+			}
+		}
+
+		// Check if we encountered any errors.
+		if (count($errors))
+		{
+			$this->errorFiles[$filename] = $filename . ' - error(s) in line(s) ' . implode(', ', $errors);
+		}
+		elseif ($php_errormsg)
+		{
+			// We didn't find any errors but there's probably a parse notice.
+			$this->errorFiles['PHP' . $filename] = 'PHP parser errors -' . $php_errormsg;
+		}
+
+		return count($errors);
+	}
+
+	/**
 	 * {@inheritdoc}
 	 *
 	 * @throws  \InvalidArgumentException
 	 */
 	protected function doExecute()
 	{
-		// If a --version option wasn't given, prompt the user
-		if (!($version = $this->input->getString('version')))
-		{
-			$this->out('Please specify the Mautic version these packages are for.');
-			$version = trim($this->in());
-		}
-
-		// Don't bother if we don't have a version string (really, even just 'M' will do!)
-		if (!$version)
-		{
-			throw new \InvalidArgumentException('Must specify version number.');
-		}
-
 		$username       = $this->get('transifex.username');
 		$password       = $this->get('transifex.password');
 		$completion     = $this->get('transifex.completion', 80);
 		$packagesDir    = JPATH_ROOT . '/packages';
 		$translationDir = JPATH_ROOT . '/translations';
+		$languageFilter = $this->input->get('language', null);
+		$debugLanguages = $this->input->getBool('debuglanguages', false);
 
 		if (!$username || !$password)
 		{
@@ -91,7 +186,7 @@ class Application extends AbstractCliApplication
 		$txOptions = ['api.username' => $username, 'api.password' => $password];
 		$transifex = new Transifex($txOptions);
 
-		$project = $transifex->projects->getProject('mautic', true);
+		$project = $transifex->get('projects')->getProject('mautic', true);
 
 		// Build folders for each team's translations
 		foreach ($project->teams as $team)
@@ -113,7 +208,7 @@ class Application extends AbstractCliApplication
 			// Split the name to create our file name
 			list ($bundle, $file) = explode(' ', $resource->name);
 
-			$languageStats = $transifex->statistics->getStatistics('mautic', $resource->slug);
+			$languageStats = $transifex->get('statistics')->getStatistics('mautic', $resource->slug);
 
 			foreach ($languageStats as $language => $stats)
 			{
@@ -126,14 +221,20 @@ class Application extends AbstractCliApplication
 					continue;
 				}
 
+				// If we are filtering on a specific language, skip anything that doesn't match
+				if ($languageFilter && $languageFilter != $language)
+				{
+					continue;
+				}
+
 				$this->out(sprintf('Processing the %1$s "%2$s" resource in "%3$s" language', $bundle, $file, $language));
 
 				$completed = str_replace('%', '', $stats->completed);
 
-				// We only want resources which are 80% completed unless told to bypass the completion check
-				if ($this->input->getBool('bypasscompletion', false) || $completed >= 80)
+				// We only want resources which match our minimum completion level unless told to bypass the completion check
+				if ($this->input->getBool('bypasscompletion', false) || $completed >= $completion)
 				{
-					$translation = $transifex->translations->getTranslation('mautic', $resource->slug, $transifexLang);
+					$translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $transifexLang);
 
 					$path = $translationDir . '/' . $language . '/' . $bundle . '/' . $file . '.ini';
 
@@ -161,6 +262,11 @@ class Application extends AbstractCliApplication
 							)
 						);
 					}
+
+					if ($debugLanguages)
+					{
+						$this->debugFile($path);
+					}
 				}
 			}
 		}
@@ -176,17 +282,14 @@ class Application extends AbstractCliApplication
 			}
 		}
 
-		if (!is_dir($packagesDir . '/' . $version))
+		// Add a folder for our current build
+		$timestamp = (new \DateTime())->format('YmdHis');
+
+		if (!Folder::create($packagesDir . '/' . $timestamp))
 		{
-			if (!Folder::create($packagesDir . '/' . $version))
-			{
-				throw new \RuntimeException(
-					sprintf(
-						'Failed creating packages folder for version "%s".  Please verify your filesystem permissions and try again.',
-						$version
-					)
-				);
-			}
+			throw new \RuntimeException(
+				'Failed creating packages folder for this build.  Please verify your filesystem permissions and try again.'
+			);
 		}
 
 		// Compile our data to forward to mautic.org and build the ZIP packages
@@ -203,32 +306,83 @@ class Application extends AbstractCliApplication
 			{
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
-				$txLangData = $transifex->languageinfo->getLanguage($transifexLang);
-				$langData[] = ['name' => $txLangData->name, 'code' => $this->fixCode($txLangData->code), 'version' => $version];
+				$txLangData = $transifex->get('languageinfo')->getLanguage($transifexLang);
+				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code];
 				$configData = $this->renderConfig(
 					['name' => $txLangData->name, 'locale' => $this->fixCode($txLangData->code), 'author' => 'Mautic Translators']
 				);
 
-				file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData);
+				if (!file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData))
+				{
+					throw new \RuntimeException(
+						sprintf(
+							'Failed writing translation package configuration file "%s".  Please verify your filesystem permissions and try again.',
+							$translationDir . '/' . $languageDir . '/config.php'
+						)
+					);
+				}
 
 				$this->runCommand(
-					'zip -r ' . $packagesDir . '/' . $version . '/' . $languageDir . '-' . $version . '.zip ' . $languageDir . '/ > /dev/null'
+					'zip -r ' . $packagesDir . '/' . $timestamp . '/' . $languageDir . '.zip ' . $languageDir . '/ > /dev/null'
 				);
 			}
 		}
 
 		// Store the lang data as a backup
-		file_put_contents($packagesDir . '/' . $version . '.txt', json_encode($langData));
+		file_put_contents($packagesDir . '/' . $timestamp . '.txt', json_encode($langData, JSON_PRETTY_PRINT));
 
 		$connector = HttpFactory::getHttp();
 
 		$connector->post(
-			'https://www.mautic.org/index.php?option=com_mauticdownload&task=addLanguages',
+			'https://updates.mautic.org/index.php?option=com_mauticdownload&task=addLanguages',
 			['languageData' => $langData],
 			['Mautic-Token' => $this->get('mautic.token')]
 		);
 
-		$this->out(sprintf('<info>Successfully created language packages for Mautic version %s!</info>', $version));
+		// If instructed, upload the packages
+		if ($this->input->getBool('uploadpackages', false))
+		{
+			// Build our S3 adapter
+			$client = S3Client::factory([
+				'credentials' => new Credentials($this->get('amazon.key'), $this->get('amazon.secret')),
+				'region' => $this->get('amazon.region')
+			]);
+
+			foreach (Folder::files($packagesDir . '/' . $timestamp) as $package)
+			{
+				if ($languageFilter && $languageFilter != $package)
+				{
+					continue;
+				}
+
+				// Remove our existing objects and upload fresh items
+				$client->deleteMatchingObjects($this->get('amazon.bucket'), 'languages/' . $package);
+
+				$client->putObject([
+					'Bucket' => $this->get('amazon.bucket'),
+					'Key' => 'languages/' . $package,
+					'SourceFile' => $packagesDir . '/' . $timestamp . '/' . $package,
+					'ACL' => 'public-read'
+				]);
+			}
+
+			$this->out('Successfully uploaded language packages');
+		}
+
+		if ($debugLanguages && !empty($this->errorFiles))
+		{
+			if (!file_put_contents($translationDir . '/errors.txt', json_encode($this->errorFiles, JSON_PRETTY_PRINT)))
+			{
+				throw new \RuntimeException(
+					sprintf(
+						'Failed writing translation errors file "%s".  Please verify your filesystem permissions and try again.',
+						$translationDir . '/errors.txt'
+					)
+				);
+			}
+		}
+
+		$this->out('Successfully created language packages for Mautic!');
 	}
 
     /**
@@ -255,27 +409,7 @@ class Application extends AbstractCliApplication
 
 		foreach ($data as $key => $value)
 		{
-			if ($value !== '')
-			{
-				if (is_string($value))
-				{
-					$value = "'$value'";
-				}
-				elseif (is_bool($value))
-				{
-					$value = ($value) ? 'true' : 'false';
-				}
-				elseif (is_null($value))
-				{
-					$value = 'null';
-				}
-				elseif (is_array($value))
-				{
-					$value = $this->renderArray($value);
-				}
-
-				$string .= "\t'$key' => $value,\n";
-			}
+			$string .= "\t'$key' => '$value',\n";
 		}
 
 		$string .= ");\n\nreturn \$config;";
@@ -301,10 +435,10 @@ class Application extends AbstractCliApplication
 			// Command exited with a status != 0
 			if ($lastLine)
 			{
-				throw new \RuntimeException($lastLine);
+				throw new \RuntimeException($lastLine, $status);
 			}
 
-			throw new \RuntimeException(sprintf('Unknown error executing "%s" command', $command));
+			throw new \RuntimeException(sprintf('Unknown error executing "%s" command', $command), $status);
 		}
 
 		return $lastLine;

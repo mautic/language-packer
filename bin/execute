@@ -7,6 +7,12 @@
  * @license    http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License Version 2 or Later
  */
 
+// Define New Relic application name
+if (extension_loaded('newrelic'))
+{
+	newrelic_set_appname('Mautic Language Packager');
+}
+
 // Application constants
 define('JPATH_ROOT', dirname(__DIR__));
 
@@ -30,5 +36,12 @@ catch (\Exception $e)
 	fwrite(STDOUT, "\nERROR: " . $e->getMessage() . "\n");
 	fwrite(STDOUT, "\n" . $e->getTraceAsString() . "\n");
 
-	exit($e->getCode() ? : 255);
+	// If there's a previous Exception, let's throw that out too
+	if ($e->getPrevious())
+	{
+		fwrite(STDOUT, "\n\nPrevious Exception: " . $e->getPrevious()->getMessage() . "\n");
+		fwrite(STDOUT, "\n" . $e->getPrevious()->getTraceAsString() . "\n");
+	}
+
+	exit(1);
 }
