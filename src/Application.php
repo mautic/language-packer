@@ -396,6 +396,8 @@ class Application extends AbstractCliApplication
         $converted = str_replace('-', '_', $code);
 
         $this->languages[$converted] = $code;
+
+        return $converted;
     }
 
 	/**
