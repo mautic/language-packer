@@ -117,6 +117,9 @@ class Application extends AbstractCliApplication
 
 			foreach ($languageStats as $language => $stats)
 			{
+			    $transifexLang = $language;
+                $language      = $this->fixCode($language);
+
 				// Skip our default language
 				if ($language == 'en')
 				{
@@ -130,7 +133,7 @@ class Application extends AbstractCliApplication
 				// We only want resources which are 80% completed unless told to bypass the completion check
 				if ($this->input->getBool('bypasscompletion', false) || $completed >= 80)
 				{
-					$translation = $transifex->translations->getTranslation('mautic', $resource->slug, $language);
+					$translation = $transifex->translations->getTranslation('mautic', $resource->slug, $transifexLang);
 
 					$path = $translationDir . '/' . $language . '/' . $bundle . '/' . $file . '.ini';
 
@@ -192,12 +195,15 @@ class Application extends AbstractCliApplication
 
 		foreach (Folder::folders($translationDir) as $languageDir)
 		{
-			// If the directory is empty, there is no point in packaging it
+		    $transifexLang = $languageDir;
+            $languageDir = $this->fixCode($languageDir);
+
+            // If the directory is empty, there is no point in packaging it
 			if (count(scandir($translationDir . '/' . $languageDir)) > 2)
 			{
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
-				$txLangData = $transifex->languageinfo->getLanguage($languageDir);
+				$txLangData = $transifex->languageinfo->getLanguage($transifexLang);
 				$langData[] = ['name' => $txLangData->name, 'code' => $this->fixCode($txLangData->code), 'version' => $version];
 				$configData = $this->renderConfig(
 					['name' => $txLangData->name, 'locale' => $this->fixCode($txLangData->code), 'author' => 'Mautic Translators']
