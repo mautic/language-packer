@@ -30,6 +30,11 @@ class Application extends AbstractCliApplication
 	 */
 	private $errorFiles = [];
 
+    /**
+     * @var array
+     */
+    private $languages = [];
+
 	/**
 	 * Constructor
 	 */
@@ -212,8 +217,7 @@ class Application extends AbstractCliApplication
 
 			foreach ($languageStats as $language => $stats)
 			{
-			    $transifexLang = $language;
-                $language      = $this->fixCode($language);
+                $language = $this->fixCode($language);
 
 				// Skip our default language
 				if ($language == 'en')
@@ -234,7 +238,7 @@ class Application extends AbstractCliApplication
 				// We only want resources which match our minimum completion level unless told to bypass the completion check
 				if ($this->input->getBool('bypasscompletion', false) || $completed >= $completion)
 				{
-					$translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $transifexLang);
+					$translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $this->languages[$language]);
 
 					$path = $translationDir . '/' . $language . '/' . $bundle . '/' . $file . '.ini';
 
@@ -298,18 +302,15 @@ class Application extends AbstractCliApplication
 
 		foreach (Folder::folders($translationDir) as $languageDir)
 		{
-		    $transifexLang = $languageDir;
-            $languageDir = $this->fixCode($languageDir);
-
             // If the directory is empty, there is no point in packaging it
 			if (count(scandir($translationDir . '/' . $languageDir)) > 2)
 			{
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
-				$txLangData = $transifex->get('languageinfo')->getLanguage($transifexLang);
-				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code];
+				$txLangData = $transifex->get('languageinfo')->getLanguage( $this->languages[$language]);
+				$langData[] = ['name' => $txLangData->name, 'code' => $languageDir];
 				$configData = $this->renderConfig(
-					['name' => $txLangData->name, 'locale' => $this->fixCode($txLangData->code), 'author' => 'Mautic Translators']
+					['name' => $txLangData->name, 'locale' => $languageDir, 'author' => 'Mautic Translators']
 				);
 
 				if (!file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData))
@@ -392,7 +393,9 @@ class Application extends AbstractCliApplication
      */
 	private function fixCode($code)
     {
-        return str_replace('-', '_', $code);
+        $converted = str_replace('-', '_', $code);
+
+        $this->languages[$converted] = $code;
     }
 
 	/**
