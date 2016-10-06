@@ -198,9 +198,9 @@ class Application extends AbstractCliApplication
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
 				$txLangData = $transifex->languageinfo->getLanguage($languageDir);
-				$langData[] = ['name' => $txLangData->name, 'code' => $txLangData->code, 'version' => $version];
+				$langData[] = ['name' => $txLangData->name, 'code' => $this->fixCode($txLangData->code), 'version' => $version];
 				$configData = $this->renderConfig(
-					['name' => $txLangData->name, 'locale' => $txLangData->code, 'author' => 'Mautic Translators']
+					['name' => $txLangData->name, 'locale' => $this->fixCode($txLangData->code), 'author' => 'Mautic Translators']
 				);
 
 				file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData);
@@ -224,6 +224,16 @@ class Application extends AbstractCliApplication
 
 		$this->out(sprintf('<info>Successfully created language packages for Mautic version %s!</info>', $version));
 	}
+
+    /**
+     * @param $code
+     *
+     * @return mixed
+     */
+	private function fixCode($code)
+    {
+        return str_replace('-', '_', $code);
+    }
 
 	/**
 	 * Renders the translation package configuration
