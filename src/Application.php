@@ -307,7 +307,7 @@ class Application extends AbstractCliApplication
 			{
 				$this->out(sprintf('Creating package for "%s" language', $languageDir));
 
-				$txLangData = $transifex->get('languageinfo')->getLanguage( $this->languages[$language]);
+				$txLangData = $transifex->get('languageinfo')->getLanguage($this->languages[$languageDir]);
 				$langData[] = ['name' => $txLangData->name, 'code' => $languageDir];
 				$configData = $this->renderConfig(
 					['name' => $txLangData->name, 'locale' => $languageDir, 'author' => 'Mautic Translators']
