@@ -27,4 +27,19 @@ final class ApplicationTest extends TestCase
         $successes = array_map(function($v) {return [$v, false];}, $files);
         return array_merge($fails,$successes);
     }
+    /**
+     * @dataProvider escapeQuotesProvider
+     */
+    public function testEscapeQuotes($file, $escapedFile)
+    {   
+        $app = new Mautic\Application();
+        $escaped = $app->escapeQuotes(file_get_contents($file));
+        $this->assertEquals(file_get_contents($escapedFile), $escaped);
+    }
+    public function escapeQuotesProvider()
+    {
+        $files = glob(dirname(__FILE__).DIRECTORY_SEPARATOR."initests/quoteTest*-in.ini");
+        $arr = array_map(function($v) {return [$v, str_replace('-in.','-out.',$v)];}, $files);
+        return $arr;
+    }
 }

@@ -59,6 +59,29 @@ class Application extends AbstractCliApplication
 
 		parent::__construct(null, $config);
 	}
+    
+    /**
+	 * Escape double quotes in ini string
+	 *
+	 * @param   string  Complete contents of ini file in a string.
+	 *
+	 * @return string Copy of the original string with double quotes escaped.
+	 */
+    public function escapeQuotes($iniString)
+    {   
+        // Split line into key=" value "end
+        $res = preg_replace_callback('/(^.*?=\s*")(.*".*)("(\s*;.*)?$)/m',
+            function($match) {
+                //replace unescaped " in value and recombine into full line
+                $esc = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]); 
+                return $match[1].$esc.$match[3];
+            },
+            $iniString);
+        if($res === NULL) {
+			throw new \RuntimeException("RegExp failed while trying to escape quotes.");
+        }
+        return $res;
+    }
 
 	/**
 	 * Checks a language file. Throws on validation failure.
@@ -222,10 +245,12 @@ class Application extends AbstractCliApplication
 								)
 							);
 						}
-					}
+                    }
+
+                    $escapedContent = $this->escapeQuotes($translation->content);
 
 					// Write the file to the system
-					if (!file_put_contents($path, $translation->content))
+					if (!file_put_contents($path, $escapedContent))
 					{
 						throw new \RuntimeException(
 							sprintf(
