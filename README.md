@@ -21,8 +21,11 @@ By default, this script checks for a minimum completion level of a resource befo
 
 A single language may be processed by passing the `--language` option, e.g. `bin/execute --language=es`.
 
+If some file fails sanity validation (checks to make sure ini file is valid) it's entire language will be pulled from processing to make sure we do not overwrite older bundles with incomplete translations.
+
 To upload packages, you must pass the `--uploadpackages` option when executing the script.  The `amazon` settings must be configured prior to this.  The Amazon Web Services account must have permissions to create, edit, and delete objects (and their associated ACL settings) on your S3 instance.
 
-### Debugging Files
+### Testing
 
-There is a simple debugger included in the application to try and find potential parse errors in downloaded language files.  This can be triggered with the `--debuglanguages` option, e.g. `bin/execute --debuglanguages`.
+`vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/`
+

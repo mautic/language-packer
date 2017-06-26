@@ -23,17 +23,15 @@ use Joomla\Registry\Registry;
  */
 class Application extends AbstractCliApplication
 {
-	/**
-	 * List of language files that are in error state
-	 *
-	 * @var  array
-	 */
-	private $errorFiles = [];
-
     /**
-     * @var array
+     * @var array 
      */
-    private $languages = [];
+    private $skipLanguages = ["en"];
+    
+    /**
+     * @var bool
+     */
+    private $errorsEncountered = false;
 
 	/**
 	 * Constructor
@@ -61,78 +59,76 @@ class Application extends AbstractCliApplication
 
 		parent::__construct(null, $config);
 	}
+    
+    /**
+	 * Escape double quotes in ini string
+	 *
+	 * @param   string  Complete contents of ini file in a string.
+	 *
+	 * @return string Copy of the original string with double quotes escaped.
+	 */
+    public function escapeQuotes($iniString)
+    {   
+        // Split line into key=" value "end
+        $res = preg_replace_callback('/(^.*?=\s*")(.*".*)("(\s*;.*)?$)/m',
+            function($match) {
+                //replace unescaped " in value and recombine into full line
+                $esc = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]); 
+                return $match[1].$esc.$match[3];
+            },
+            $iniString);
+        if($res === NULL) {
+			throw new \RuntimeException("RegExp failed while trying to escape quotes.");
+        }
+        return $res;
+    }
 
 	/**
-	 * Debugs a language file
+	 * Checks a language file. Throws on validation failure.
 	 *
-	 * @param   string  $filename  Absolute path to the file to debug
-	 *
-	 * @return  integer  A count of the number of parsing errors
+	 * @param   string  $filename  Absolute path to the file to check
 	 *
 	 * @throws  \InvalidArgumentException
+	 * @throws  \DomainException
 	 */
-	private function debugFile($filename)
+	public function ensureFileValid($filename)
 	{
-		// Make sure our file actually exists
-		if (!file_exists($filename))
-		{
-			throw new \InvalidArgumentException(
-				sprintf('Unable to locate file "%s" for debugging', $filename)
-			);
-		}
-
 		// Initialise variables for manually parsing the file for common errors.
 		$blacklist = ['YES', 'NO', 'NULL', 'FALSE', 'ON', 'OFF', 'NONE', 'TRUE'];
 		$errors = [];
-		$php_errormsg = null;
 
-		// Open the file as a stream.
-		$file = new \SplFileObject($filename);
+        // Read the whole file at once
+        // no sense streaming since we load the whole thing in production
+        $file = file_get_contents($filename);
+        if($file === FALSE) {
+			throw new \InvalidArgumentException(
+				sprintf('Unable to read file "%s" for checking', $filename)
+			);
+        }
+        $file = explode("\n", $file);
 
 		foreach ($file as $lineNumber => $line)
 		{
-			// Avoid BOM error as BOM is OK when using parse_ini.
-			if ($lineNumber == 0)
-			{
-				$line = str_replace("\xEF\xBB\xBF", '', $line);
-			}
-
-			$line = trim($line);
-
+            $realNumber = $lineNumber + 1;
 			// Ignore comment lines.
-			if (!strlen($line) || $line['0'] == ';')
+			if (!strlen(trim($line)) || $line['0'] == ';')
 			{
-				continue;
-			}
-
-			// Ignore grouping tag lines, like: [group]
-			if (preg_match('#^\[[^\]]*\](\s*;.*)?$#', $line))
-			{
-				continue;
-			}
-
-			$realNumber = $lineNumber + 1;
-
-			// Check for odd number of double quotes.
-			if (substr_count($line, '"') % 2 != 0)
-			{
-				$errors[] = $realNumber;
 				continue;
 			}
 
 			// Check that the line passes the necessary format.
 			if (!preg_match('#^[A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*".*"(\s*;.*)?$#', $line))
 			{
-				$errors[] = $realNumber;
+				$errors[] = "Line $realNumber does not match format regexp";
 				continue;
 			}
 
-			// Check for unescaped quotes
-			preg_match_all('/\"*[^\\"]*[\"\n](?=(?:[^\\"]*[^\"]*")*[^"]*$)/', $line, $matches);
+			// Gets the count of unescaped quotes
+			preg_match_all('/(?<!\\\\)\"/', $line, $matches);
 
-			if (count($matches[0]) > 2)
+			if (count($matches[0]) != 2)
 			{
-				$errors[] = $realNumber;
+				$errors[] = "Line $realNumber doesn't have exactly 2 unescaped quotes";
 				continue;
 			}
 
@@ -141,22 +137,17 @@ class Application extends AbstractCliApplication
 
 			if (in_array($key, $blacklist))
 			{
-				$errors[] = $realNumber;
+				$errors[] = "Line $realNumber has blacklisted key";
 			}
-		}
+        }
+        if(@parse_ini_file($filename, false) === false) {
+            $errors[] = "Cannot load file with parse_ini_file";   
+        };
 
-		// Check if we encountered any errors.
 		if (count($errors))
 		{
-			$this->errorFiles[$filename] = $filename . ' - error(s) in line(s) ' . implode(', ', $errors);
+            throw new \DomainException("File $filename has following errors:\n".implode(";", $errors));
 		}
-		elseif ($php_errormsg)
-		{
-			// We didn't find any errors but there's probably a parse notice.
-			$this->errorFiles['PHP' . $filename] = 'PHP parser errors -' . $php_errormsg;
-		}
-
-		return count($errors);
 	}
 
 	/**
@@ -219,8 +210,8 @@ class Application extends AbstractCliApplication
 			{
                 $language = $this->fixCode($language);
 
-				// Skip our default language
-				if ($language == 'en')
+				// Skip our default language and languages that failed validation
+				if (in_array($language, $this->skipLanguages))
 				{
 					continue;
 				}
@@ -254,10 +245,12 @@ class Application extends AbstractCliApplication
 								)
 							);
 						}
-					}
+                    }
+
+                    $escapedContent = $this->escapeQuotes($translation->content);
 
 					// Write the file to the system
-					if (!file_put_contents($path, $translation->content))
+					if (!file_put_contents($path, $escapedContent))
 					{
 						throw new \RuntimeException(
 							sprintf(
@@ -267,10 +260,15 @@ class Application extends AbstractCliApplication
 						);
 					}
 
-					if ($debugLanguages)
-					{
-						$this->debugFile($path);
-					}
+                    try {
+                        $this->ensureFileValid($path);
+                    }
+                    catch (\DomainException $e) {
+                        $this->skipLanguages[] = $language;
+                        $this->errorsEncountered = true;
+                        $this->out("Skipping language $language because of failed validations".$e->getMessage());
+                        continue;
+                    }
 				}
 			}
 		}
@@ -302,6 +300,11 @@ class Application extends AbstractCliApplication
 
 		foreach (Folder::folders($translationDir) as $languageDir)
 		{
+            // Skip our default language and languages that failed validation
+            if (in_array($languageDir, $this->skipLanguages))
+            {
+                continue;
+            }
             // If the directory is empty, there is no point in packaging it
 			if (count(scandir($translationDir . '/' . $languageDir)) > 2)
 			{
@@ -369,21 +372,11 @@ class Application extends AbstractCliApplication
 
 			$this->out('Successfully uploaded language packages');
 		}
-
-		if ($debugLanguages && !empty($this->errorFiles))
-		{
-			if (!file_put_contents($translationDir . '/errors.txt', json_encode($this->errorFiles, JSON_PRETTY_PRINT)))
-			{
-				throw new \RuntimeException(
-					sprintf(
-						'Failed writing translation errors file "%s".  Please verify your filesystem permissions and try again.',
-						$translationDir . '/errors.txt'
-					)
-				);
-			}
-		}
-
-		$this->out('Successfully created language packages for Mautic!');
+        if($this->errorsEncountered) {
+            $this->out('Created language packages for Mautic. But there were errors. Check your logs.');
+            exit(1);
+        }
+        $this->out('Successfully created language packages for Mautic!');
 	}
 
     /**
