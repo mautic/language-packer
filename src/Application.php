@@ -70,7 +70,7 @@ class Application extends AbstractCliApplication
     public function escapeQuotes($iniString)
     {   
         // Split line into key=" value "end
-        $res = preg_replace_callback('/(^.*?=\s*")(.*".*)("(\s*;.*)?$)/m',
+        $res = preg_replace_callback('/(^.*?=\s*")(.*".*)("\s*(;.*)?$)/m',
             function($match) {
                 //replace unescaped " in value and recombine into full line
                 $esc = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]); 
@@ -117,7 +117,7 @@ class Application extends AbstractCliApplication
 			}
 
 			// Check that the line passes the necessary format.
-			if (!preg_match('#^[A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*".*"(\s*;.*)?$#', $line))
+			if (!preg_match('#^[A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*".*"\s*(;.*)?$#', $line))
 			{
 				$errors[] = "Line $realNumber does not match format regexp";
 				continue;
