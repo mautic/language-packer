@@ -312,9 +312,8 @@ class Application extends AbstractCliApplication
 
 				$txLangData = $transifex->get('languageinfo')->getLanguage($this->languages[$languageDir]);
 				$langData[] = ['name' => $txLangData->name, 'code' => $languageDir];
-				$configData = $this->renderConfig(
-					['name' => $txLangData->name, 'locale' => $languageDir, 'author' => 'Mautic Translators']
-				);
+				$packageMetadata = ['name' => $txLangData->name, 'locale' => $languageDir, 'author' => 'Mautic Translators', 'buildTime' => date("c")];
+				$configData = $this->renderConfig($packageMetadata);
 
 				if (!file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData))
 				{
@@ -325,10 +324,21 @@ class Application extends AbstractCliApplication
 						)
 					);
 				}
+				if (!file_put_contents($translationDir . '/' . $languageDir . '/config.json', json_encode($packageMetadata)))
+				{
+					throw new \RuntimeException(
+						sprintf(
+							'Failed writing translation package configuration file "%s".  Please verify your filesystem permissions and try again.',
+							$translationDir . '/' . $languageDir . '/config.json'
+						)
+					);
+				}
 
 				$this->runCommand(
 					'zip -r ' . $packagesDir . '/' . $timestamp . '/' . $languageDir . '.zip ' . $languageDir . '/ > /dev/null'
-				);
+                );
+				// Store the metadata file outside of the zip too for easier manipulation with scripts
+				copy($translationDir . '/' . $languageDir.'/config.json', $packagesDir . '/' . $timestamp . '/' . $languageDir . '.json');
 			}
 		}
 
