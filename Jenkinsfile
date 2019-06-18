@@ -1,4 +1,7 @@
 pipeline {
+  triggers {
+    cron('H H * * *')
+  }
   agent {
     kubernetes {
       label 'mautic-translations'
