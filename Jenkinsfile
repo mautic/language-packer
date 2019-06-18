@@ -26,11 +26,11 @@ pipeline {
       steps {
         container('composer') {
           ansiColor('xterm') {
-            withCredentials([file(credentialsId: 'language-packer-credentials', variable: 'language-packer-credentials')]) {
-              sh """
-                cp -v "$language-packer-credentials" etc/config.json
+            withCredentials([file(credentialsId: 'language-packer-credentials', variable: 'creds')]) {
+              sh '''
+                cp -v "$creds" etc/config.json
                 bin/execute
-              """
+              '''
             }
           }
         }
