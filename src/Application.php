@@ -232,16 +232,17 @@ class Application extends AbstractCliApplication
                     $translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $this->languages[$language]);
 
                     $path = $translationDir . '/' . $language . '/' . $bundle . '/' . $file . '.ini';
+                    $bundlePath = $translationDir . '/' . $language . '/' . $bundle;
 
-                    if (!is_dir($translationDir . '/' . $language . '/' . $bundle))
+                    if (!is_dir($bundlePath))
                     {
-                        if (!Folder::create($translationDir . '/' . $language . '/' . $bundle))
+                        if (!Folder::create($bundlePath))
                         {
                             throw new \RuntimeException(
                                 sprintf(
                                     'Failed creating bundle folder for the "%1$s" bundle at path "%2$s".  Please verify your filesystem permissions and try again.',
                                     $bundle,
-                                    $translationDir . '/' . $language . '/' . $bundle
+                                    $bundlePath
                                 )
                             );
                         }
@@ -259,6 +260,10 @@ class Application extends AbstractCliApplication
                             )
                         );
                     }
+
+                    // set the timestamp on the file so our zip builds are reproducible
+                    touch($path, strtotime($stats->last_update));
+                    touch($bundlePath, strtotime($stats->last_update));
 
                     try {
                         $this->ensureFileValid($path);
@@ -312,7 +317,7 @@ class Application extends AbstractCliApplication
 
                 $txLangData = $transifex->get('languageinfo')->getLanguage($this->languages[$languageDir]);
                 $langData[] = ['name' => $txLangData->name, 'code' => $languageDir];
-                $packageMetadata = ['name' => $txLangData->name, 'locale' => $languageDir, 'author' => 'Mautic Translators', 'buildTime' => date("c")];
+                $packageMetadata = ['name' => $txLangData->name, 'locale' => $languageDir, 'author' => 'Mautic Translators'];
                 $configData = $this->renderConfig($packageMetadata);
 
                 if (!file_put_contents($translationDir . '/' . $languageDir . '/config.php', $configData))
@@ -333,9 +338,14 @@ class Application extends AbstractCliApplication
                         )
                     );
                 }
+                // hack so we produce exactly the same zip file on each run
+                touch($translationDir . '/' . $languageDir . '/config.php', strtotime('2019-01-01'));
+                touch($translationDir . '/' . $languageDir . '/config.json', strtotime('2019-01-01'));
+                touch($translationDir . '/' . $languageDir, strtotime('2019-01-01'));
 
+                // we need find and sort for the order of files inside zip to be deterministic
                 $this->runCommand(
-                    'zip -r ' . $packagesDir . '/' . $timestamp . '/' . $languageDir . '.zip ' . $languageDir . '/ > /dev/null'
+                    "find $languageDir/ -mindepth 1 | sort | zip -X ". $packagesDir . '/' . $timestamp . '/' . $languageDir . '.zip -@ > /dev/null'
                 );
                 // Store the metadata file outside of the zip too for easier manipulation with scripts
                 copy($translationDir . '/' . $languageDir.'/config.json', $packagesDir . '/' . $timestamp . '/' . $languageDir . '.json');
