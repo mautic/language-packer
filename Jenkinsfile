@@ -42,7 +42,7 @@ pipeline {
                 bin/execute
                 cp -v packages/*/* PACKS
                 cd PACKS
-                cat *.json | jq -s '{"languages":[.]}' > manifest.json
+                cat *.json | jq -s '{"languages":.}' > manifest.json
                 git add .
                 git commit -m 'automatic language build'
                 git push --set-upstream origin HEAD:master
