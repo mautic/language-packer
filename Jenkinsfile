@@ -43,6 +43,12 @@ pipeline {
                 cp -v packages/*/* PACKS
                 cd PACKS
                 cat *.json | jq -s '{"languages":.}' > manifest.json
+
+                if [ -z "$(git status --porcelain)" ]; then
+                  # Working directory clean (no changes)
+                  exit 0
+                fi
+
                 git add .
                 git commit -m 'automatic language build'
                 git push --set-upstream origin HEAD:master
@@ -50,6 +56,13 @@ pipeline {
             }
           }
         }
+      }
+    }
+  }
+  post {
+    failure {
+      script {
+        echo slackSend (color: '#FF0000', message: "Language packer job failed.")
       }
     }
   }
