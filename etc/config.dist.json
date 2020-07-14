@@ -3,14 +3,5 @@
         "username": "",
         "password": "",
         "completion": 80
-    },
-    "amazon": {
-        "key": "",
-        "secret": "",
-        "region": "",
-        "bucket": "mautic"
-    },
-    "mautic": {
-        "token": "ChangeMe"
     }
 }
