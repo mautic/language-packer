@@ -355,14 +355,6 @@ class Application extends AbstractCliApplication
         // Store the lang data as a backup
         file_put_contents($packagesDir . '/' . $timestamp . '.txt', json_encode($langData, JSON_PRETTY_PRINT));
 
-        $connector = HttpFactory::getHttp();
-
-        $connector->post(
-            'https://updates.mautic.org/index.php?option=com_mauticdownload&task=addLanguages',
-            ['languageData' => $langData],
-            ['Mautic-Token' => $this->get('mautic.token')]
-        );
-
         // If instructed, upload the packages
         if ($this->input->getBool('uploadpackages', false))
         {
