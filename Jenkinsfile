@@ -26,7 +26,7 @@ pipeline {
             """
           }
           dir('PACKS') {
-            checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: 'master']], userRemoteConfigs: [[credentialsId: '1a066462-6d24-4247-bef6-1da084c8f484', url: 'git@github.com:mautic-inc/mautic-language-packs.git']]]
+            checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: 'master']], userRemoteConfigs: [[credentialsId: '1a066462-6d24-4247-bef6-1da084c8f484', url: 'git@github.com:mautic/language-packs.git']]]
           }
         }
       }
