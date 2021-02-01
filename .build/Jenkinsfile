@@ -1,3 +1,5 @@
+@Library('jenkins-scripts') _
+
 pipeline {
   triggers {
     cron('H H * * *')
@@ -65,8 +67,13 @@ pipeline {
   post {
     failure {
       script {
-        echo slackSend (color: '#FF0000', message: "Language packer job failed.")
+        postFailureScript()
       }
     }
-  }
+    fixed {
+      script {
+        postFixedScript()
+      }
+    }
+  }    
 }
