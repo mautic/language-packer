@@ -229,7 +229,20 @@ class Application extends AbstractCliApplication
                 // We only want resources which match our minimum completion level unless told to bypass the completion check
                 if ($this->input->getBool('bypasscompletion', false) || $completed >= $completion)
                 {
-                    $translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $this->languages[$language]);
+                    $maxAttempts=5;
+                    for($attempt=1;$attempt<=$maxAttempts; $attempt++) {
+                        try {
+                            $translation = $transifex->get('translations')->getTranslation('mautic', $resource->slug, $this->languages[$language]);
+                            break;
+                        }
+                        catch (\Exception $e) {
+                            if($attempt == $maxAttempts) {
+                                throw $e;
+                            }
+                            $this->out("Encountered error during download. Retrying. Attempt $attempt. Error:".$e->getMessage());
+                            sleep(pow(2,$attempt));
+                        }
+                    }
 
                     $path = $translationDir . '/' . $language . '/' . $bundle . '/' . $file . '.ini';
                     $bundlePath = $translationDir . '/' . $language . '/' . $bundle;
