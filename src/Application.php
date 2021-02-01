@@ -342,7 +342,7 @@ class Application extends AbstractCliApplication
                         )
                     );
                 }
-                if (!file_put_contents($translationDir . '/' . $languageDir . '/config.json', json_encode($packageMetadata)))
+                if (!file_put_contents($translationDir . '/' . $languageDir . '/config.json', json_encode($packageMetadata)."\n"))
                 {
                     throw new \RuntimeException(
                         sprintf(
