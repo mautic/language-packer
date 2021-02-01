@@ -1,3 +1,5 @@
+@Library('jenkins-scripts') _
+
 pipeline {
   triggers {
     cron('H H * * *')
@@ -8,7 +10,7 @@ pipeline {
       inheritFrom 'base'
       containerTemplate {
         name 'composer'
-        image 'us.gcr.io/mautic-ma/composer:master'
+        image 'php:7.4'
         ttyEnabled true
         command 'cat'
       }
@@ -20,9 +22,12 @@ pipeline {
         container('composer') {
           ansiColor('xterm') {
             sh """
-              composer install --ansi
+              .build/install-composer.sh
+              apt update && apt install git jq ssh-client unzip zip -y
+              mkdir -p /root/.ssh/ && ssh-keyscan github.com >> /root/.ssh/known_hosts
+
+              ./composer.phar install --ansi
               mkdir PACKS && chmod 777 PACKS
-              whoami
             """
           }
           dir('PACKS') {
@@ -62,8 +67,13 @@ pipeline {
   post {
     failure {
       script {
-        echo slackSend (color: '#FF0000', message: "Language packer job failed.")
+        postFailureScript()
       }
     }
-  }
+    fixed {
+      script {
+        postFixedScript()
+      }
+    }
+  }    
 }
