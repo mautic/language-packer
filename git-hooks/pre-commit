@@ -14,7 +14,7 @@ fi
 if $HAS_PHP_CS_FIXER; then
 
   # Fix changed (indexed) files
-  $PHP_CS_FIXER fix --config=$ROOT/.php-cs-fixer.php --verbose --using-cache=no $(git diff --cached --name-only --diff-filter=ACMR)
+  $PHP_CS_FIXER fix --config=$ROOT/.php-cs-fixer.dist.php --verbose --using-cache=no $(git diff --cached --name-only --diff-filter=ACMR)
 
   # Add the changes from CS Fixer back to the git index:
   git add $(git diff --cached --name-only --diff-filter=ACMR)
