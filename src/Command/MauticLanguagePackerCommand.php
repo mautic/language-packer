@@ -17,7 +17,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Filesystem\Filesystem;
 
 #[AsCommand(name: self::NAME, description: 'Creates language packages for Mautic releases')]
 class MauticLanguagePackerCommand extends Command
@@ -42,6 +41,11 @@ class MauticLanguagePackerCommand extends Command
             null,
             InputOption::VALUE_NONE,
             'Do you want to upload the package to AWS S3? Add --upload-package as argument.'
+        )->addOption(
+            'language',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Do you want to process a single language? Add e.g. `--language es` as argument.'
         );
     }
 
@@ -64,13 +68,14 @@ class MauticLanguagePackerCommand extends Command
 
         $filterLanguages = $input->getArgument('filter-languages');
         $uploadPackage   = $input->getOption('upload-package');
+        $language        = $input->getOption('language') ?? '';
 
         // Remove any previous pulls and rebuild the translations folder
         $translationsDirEvent = new PrepareDirEvent($translationsDir, true);
         $this->eventDispatcher->dispatch($translationsDirEvent, PrepareDirEvent::NAME);
 
         // Fetch the project resources now and store them locally
-        $resourceEvent = new ResourceEvent($io, $filterLanguages, $translationsDir);
+        $resourceEvent = new ResourceEvent($io, $filterLanguages, $translationsDir, $language);
         $this->eventDispatcher->dispatch($resourceEvent, ResourceEvent::NAME);
 
         // Now we start building our ZIP archives

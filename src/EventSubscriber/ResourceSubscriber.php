@@ -29,6 +29,7 @@ class ResourceSubscriber implements EventSubscriberInterface
         $io              = $event->getIo();
         $filterLanguages = $event->getFilterLanguages();
         $translationsDir = $event->getTranslationsDir();
+        $language        = $event->getLanguage();
 
         $resources    = $this->transifex->getConnector(Resources::class);
         $response     = $resources->getAll();
@@ -44,7 +45,8 @@ class ResourceSubscriber implements EventSubscriberInterface
                     $io,
                     $resourceAttributes,
                     $filterLanguages,
-                    $translationsDir
+                    $translationsDir,
+                    $language
                 );
                 $this->eventDispatcher->dispatch($languageStatsEvent, LanguageStatsEvent::NAME);
             }

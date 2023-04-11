@@ -14,7 +14,8 @@ class ResourceEvent extends Event
     public function __construct(
         private readonly SymfonyStyle $io,
         private readonly array $filterLanguages,
-        private readonly string $translationsDir
+        private readonly string $translationsDir,
+        private readonly string $language
     ) {
     }
 
@@ -31,5 +32,10 @@ class ResourceEvent extends Event
     public function getTranslationsDir(): string
     {
         return $this->translationsDir;
+    }
+
+    public function getLanguage(): string
+    {
+        return $this->language;
     }
 }

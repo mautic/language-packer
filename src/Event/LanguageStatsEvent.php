@@ -15,7 +15,8 @@ class LanguageStatsEvent extends Event
         private readonly SymfonyStyle $io,
         private readonly array $resourceAttributes,
         private readonly array $filterLanguages,
-        private readonly string $translationsDir
+        private readonly string $translationsDir,
+        private readonly string $language
     ) {
     }
 
@@ -37,5 +38,10 @@ class LanguageStatsEvent extends Event
     public function getTranslationsDir(): string
     {
         return $this->translationsDir;
+    }
+
+    public function getLanguage(): string
+    {
+        return $this->language;
     }
 }
