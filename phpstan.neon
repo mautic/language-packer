@@ -1,0 +1,13 @@
+includes:
+	- phpstan-baseline.neon
+	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
+parameters:
+	level: 9
+	reportUnmatchedIgnoredErrors: false
+	checkGenericClassInNonGenericObjectType: false
+	parallel:
+		maximumNumberOfProcesses: 4
+		processTimeout: 1000.0
+	paths:
+		- src/

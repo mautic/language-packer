@@ -1,30 +1,88 @@
 {
-    "name": "mautic/language-packager",
-    "description": "Creates language packages for Mautic releases",
-    "license": "GPL-2.0+",
-    "type": "project",
-    "authors": [
-        {
-            "name": "Michael Babker",
-            "homepage": "https://www.mautic.org"
-        }
-    ],
-    "require": {
-        "php": ">=5.5",
-        "joomla/application": "~1.3",
-        "joomla/filesystem": "~1.2",
-        "joomla/http": "~1.1",
-        "joomla/input": "~1.2",
-        "joomla/registry": "~1.4",
-        "babdev/transifex": "~1.0",
-        "aws/aws-sdk-php": "~2.7"
+  "name": "mautic/language-packager",
+  "description": "Creates language packages for Mautic releases",
+  "license": "GPL-2.0+",
+  "type": "project",
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=8.1",
+    "ext-ctype": "*",
+    "ext-iconv": "*",
+    "ext-json": "*",
+    "ext-zip": "*",
+    "aws/aws-sdk-php": "^3.263",
+    "guzzlehttp/guzzle": "^7.5",
+    "http-interop/http-factory-guzzle": "^1.2",
+    "mautic/transifex": "^5.0",
+    "symfony/console": "6.2.*",
+    "symfony/dotenv": "6.2.*",
+    "symfony/flex": "^2",
+    "symfony/framework-bundle": "6.2.*",
+    "symfony/runtime": "6.2.*",
+    "symfony/yaml": "6.2.*"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.16",
+    "phpstan/phpstan": "^1.10",
+    "phpunit/phpunit": "^10.0",
+    "rector/rector": "^0.15.24",
+    "symfony/maker-bundle": "^1.48"
+  },
+  "config": {
+    "allow-plugins": {
+      "php-http/discovery": true,
+      "symfony/flex": true,
+      "symfony/runtime": true
     },
-    "autoload": {
-        "psr-4": {
-            "Mautic\\": "src/"
-        }
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^6.1"
+    "bin-dir": "bin",
+    "sort-packages": true
+  },
+  "autoload": {
+    "psr-4": {
+      "MauticLanguagePacker\\": "src/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "MauticLanguagePacker\\Tests\\": "tests/"
+    }
+  },
+  "replace": {
+    "symfony/polyfill-ctype": "*",
+    "symfony/polyfill-iconv": "*",
+    "symfony/polyfill-php72": "*",
+    "symfony/polyfill-php73": "*",
+    "symfony/polyfill-php74": "*",
+    "symfony/polyfill-php80": "*",
+    "symfony/polyfill-php81": "*"
+  },
+  "scripts": {
+    "auto-scripts": {
+      "cache:clear": "symfony-cmd",
+      "assets:install %PUBLIC_DIR%": "symfony-cmd",
+      "php -r \"if(file_exists('./.git')&&file_exists('./git-hooks/pre-commit'.(PHP_OS==='WINNT'?'.win':''))){copy('./git-hooks/pre-commit'.(PHP_OS==='WINNT'?'.win':''),'./.git/hooks/pre-commit');}if(file_exists('./.git')&&file_exists('./git-hooks/post-checkout'.(PHP_OS==='WINNT'?'.win':''))){copy('./git-hooks/post-checkout'.(PHP_OS==='WINNT'?'.win':''),'./.git/hooks/post-checkout');}\"": "script",
+      "php -r \"if((PHP_OS!=='WINNT')&&file_exists('./.git/hooks/pre-commit')){chmod('./.git/hooks/pre-commit',0755);}if((PHP_OS!=='WINNT')&&file_exists('./.git/hooks/post-checkout')){chmod('./.git/hooks/post-checkout',0755);}\"": "script"
+    },
+    "post-install-cmd": [
+      "@auto-scripts"
+    ],
+    "post-update-cmd": [
+      "@auto-scripts"
+    ],
+    "test": "bin/phpunit -d memory_limit=4G --bootstrap vendor/autoload.php --configuration phpunit.xml.dist",
+    "phpstan": "php -d memory_limit=6G bin/phpstan analyse",
+    "cs": "bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php -v --dry-run --diff",
+    "fixcs": "bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --using-cache=no -v",
+    "rector": "bin/rector process"
+  },
+  "conflict": {
+    "symfony/symfony": "*"
+  },
+  "extra": {
+    "symfony": {
+      "allow-contrib": false,
+      "require": "6.2.*"
+    }
+  }
 }
