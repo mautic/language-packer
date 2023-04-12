@@ -16,6 +16,9 @@ final class Languages
         $this->apiConnector = $apiConnector;
     }
 
+    /**
+     * @see https://developers.transifex.com/reference/get_languages-language-id
+     */
     public function getLanguageDetails(string $language): ResponseInterface
     {
         $uri = $this->apiConnector->createUri('languages/'.urlencode("l:{$language}"));
