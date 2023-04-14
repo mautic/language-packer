@@ -70,8 +70,8 @@
     "post-update-cmd": [
       "@auto-scripts"
     ],
-    "test": "bin/phpunit -d memory_limit=4G --bootstrap vendor/autoload.php --configuration phpunit.xml.dist",
-    "phpstan": "php -d memory_limit=6G bin/phpstan analyse",
+    "test": "bin/phpunit -d memory_limit=2G --bootstrap vendor/autoload.php --configuration phpunit.xml.dist",
+    "phpstan": "php -d memory_limit=4G bin/phpstan analyse",
     "cs": "bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php -v --dry-run --diff",
     "fixcs": "bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --using-cache=no -v",
     "rector": "bin/rector process"
