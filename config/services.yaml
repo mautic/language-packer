@@ -6,8 +6,6 @@
 parameters:
   mlp.packages.dir: '%kernel.project_dir%/packages'
   mlp.translations.dir: '%kernel.project_dir%/translations'
-  mlp.default.language.filter: null
-  mlp.default.debug.languages: false
   mlp.transifex.api.token: '%env(TRANSIFEX_API_TOKEN)%'
   mlp.transifex.organisation: '%env(TRANSIFEX_ORGANISATION)%'
   mlp.transifex.project: '%env(TRANSIFEX_PROJECT)%'
