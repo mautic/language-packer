@@ -63,8 +63,8 @@ class MauticLanguagePackerCommand extends Command
             return Command::FAILURE;
         }
 
-        $translationsDir = $this->parameterBag->get('mlp.translations.dir');
         $packagesDir     = $this->parameterBag->get('mlp.packages.dir');
+        $translationsDir = $this->parameterBag->get('mlp.translations.dir');
 
         $filterLanguages = $input->getArgument('filter-languages');
         $uploadPackage   = $input->getOption('upload-package');
@@ -117,7 +117,9 @@ class MauticLanguagePackerCommand extends Command
             }
 
             $uploadPackageEvent = new UploadPackageEvent(
-                $io, $packagesTimestampDir, $this->parameterBag->get('mlp.aws.bucket')
+                $io,
+                $packagesTimestampDir,
+                $this->parameterBag->get('mlp.aws.bucket')
             );
             $this->eventDispatcher->dispatch($uploadPackageEvent, UploadPackageEvent::NAME);
 
