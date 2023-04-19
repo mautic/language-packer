@@ -1,0 +1,9 @@
+aws:
+  version: latest
+  region: us-east-1
+  credentials:
+    key: "%mlp.aws.key%"
+    secret: "%mlp.aws.secret%"
+  S3:
+    version: 'latest'
+    region: '%mlp.aws.region%'
