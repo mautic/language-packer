@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\EventSubscriber;
+namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
 
 use MauticLanguagePacker\Event\PrepareDirEvent;
 use MauticLanguagePacker\EventSubscriber\PrepareDirSubscriber;

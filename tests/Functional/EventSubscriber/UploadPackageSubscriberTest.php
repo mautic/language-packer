@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\EventSubscriber;
+namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
 
 use Aws\S3\S3Client;
 use MauticLanguagePacker\Event\UploadPackageEvent;

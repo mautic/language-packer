@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\EventSubscriber;
+namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
 
 use GuzzleHttp\Psr7\Response;
 use Http\Factory\Guzzle\RequestFactory;
