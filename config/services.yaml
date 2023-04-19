@@ -41,8 +41,3 @@ services: # default configuration for services in *this* file
 
   Mautic\Transifex\TransifexInterface:
     alias: 'mautic.transifex'
-
-  MauticLanguagePacker\Service\AwsClient:
-    class: MauticLanguagePacker\Service\AwsClient
-    arguments:
-      - { version: 'latest', region: '%mlp.aws.region%', credentials: { key: '%mlp.aws.key%', secret: '%mlp.aws.secret%' } }
