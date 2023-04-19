@@ -5,16 +5,12 @@ declare(strict_types=1);
 namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
 
 use GuzzleHttp\Psr7\Response;
-use Http\Factory\Guzzle\RequestFactory;
-use Http\Factory\Guzzle\StreamFactory;
-use Http\Factory\Guzzle\UriFactory;
-use Mautic\Transifex\Config;
-use Mautic\Transifex\Transifex;
 use MauticLanguagePacker\Event\DTO\TranslationDTO;
 use MauticLanguagePacker\Event\PrepareDirEvent;
 use MauticLanguagePacker\Event\TranslationEvent;
 use MauticLanguagePacker\EventSubscriber\TranslationSubscriber;
 use MauticLanguagePacker\Tests\Common\Client\TransifexTestClient;
+use MauticLanguagePacker\Tests\Common\Client\TransifexTrait;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -23,6 +19,8 @@ use Symfony\Component\Filesystem\Filesystem;
 
 class TranslationSubscriberTest extends KernelTestCase
 {
+    use TransifexTrait;
+
     public function testGetSubscribedEvents(): void
     {
         Assert::assertSame(
@@ -47,16 +45,7 @@ class TranslationSubscriberTest extends KernelTestCase
 EOT;
         $client->setResponse(new Response(200, [], $body));
 
-        $requestFactory = new RequestFactory();
-        $streamFactory  = new StreamFactory();
-        $uriFactory     = new UriFactory();
-        $config         = new Config();
-
-        $config->setApiToken('some-api-token');
-        $config->setOrganization('some-organization');
-        $config->setProject('some-project');
-
-        $transifex = new Transifex($client, $requestFactory, $streamFactory, $uriFactory, $config);
+        $transifex = $this->getTransifex($client);
 
         $translationEventMock = $this->createMock(TranslationEvent::class);
         $slug                 = 'addonbundle-flashes';
