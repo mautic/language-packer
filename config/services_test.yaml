@@ -1,0 +1,39 @@
+parameters:
+  mlp.packages.dir: '%kernel.project_dir%/tests/Common/packages'
+  mlp.translations.dir: '%kernel.project_dir%/tests/Common/translations'
+  mlp.transifex.api.token: 'some_api_token'
+  mlp.transifex.organisation: 'some_organisation'
+  mlp.transifex.project: 'some_project'
+  mlp.aws.key: 'some_aws_key'
+  mlp.aws.secret: 'some_aws_secret'
+  mlp.aws.region: 'some_aws_region'
+  mlp.aws.bucket: 'some_aws_bucket'
+
+services:
+  transifex.test.client:
+    class: MauticLanguagePacker\Tests\Common\Client\TransifexTestClient
+    public: true
+
+  request.factory:
+    class: Http\Factory\Guzzle\RequestFactory
+
+  stream.factory:
+    class: Http\Factory\Guzzle\StreamFactory
+
+  uri.factory:
+    class: Http\Factory\Guzzle\UriFactory
+
+  mautic.transifex.config:
+    class: Mautic\Transifex\Config
+    calls:
+      - [ 'setApiToken', [ '%mlp.transifex.api.token%' ] ]
+      - [ 'setOrganization', [ '%mlp.transifex.organisation%' ] ]
+      - [ 'setProject', [ '%mlp.transifex.project%' ] ]
+
+  mautic.transifex.api.connector:
+    class: Mautic\Transifex\ApiConnector
+    arguments: [ '@transifex.test.client', '@request.factory', '@stream.factory', '@uri.factory', '@mautic.transifex.config' ]
+
+  mautic.transifex:
+    class: Mautic\Transifex\Transifex
+    arguments: [ '@transifex.test.client', '@request.factory', '@stream.factory', '@uri.factory', '@mautic.transifex.config' ]
