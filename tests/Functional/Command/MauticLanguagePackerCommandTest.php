@@ -11,30 +11,45 @@ use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 class MauticLanguagePackerCommandTest extends KernelTestCase
 {
     private readonly CommandTester $commandTester;
 
-    private readonly MauticLanguagePackerCommand $command;
+    private readonly TransifexTestClient $client;
 
-    private ContainerInterface $container;
+    private readonly Filesystem $filesystem;
 
-    private TransifexTestClient $client;
+    private string $packagesDir;
+
+    private string $translationsDir;
 
     protected function setUp(): void
     {
-        $this->container = self::getContainer();
-        $parameterBag    = $this->container->get('parameter_bag');
-        $eventDispatcher = $this->container->get('event_dispatcher');
+        $container       = self::getContainer();
+        $parameterBag    = $container->get('parameter_bag');
+        $eventDispatcher = $container->get('event_dispatcher');
 
-        $this->client = $this->container->get('transifex.test.client');
+        $this->client = $container->get('transifex.test.client');
 
         $application = new Application();
         $application->add(new MauticLanguagePackerCommand($parameterBag, $eventDispatcher));
-        $this->command       = $application->find('mautic:language:packer');
-        $this->commandTester = new CommandTester($this->command);
+        $command             = $application->find('mautic:language:packer');
+        $this->commandTester = new CommandTester($command);
+        $this->filesystem    = new Filesystem();
+
+        $this->packagesDir     = $parameterBag->get('mlp.packages.dir');
+        $this->translationsDir = $parameterBag->get('mlp.translations.dir');
+
+        $this->backupTestTranslationsFolder();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->restoreTestTranslationsFolder();
+        $this->removeExtraPackagesFolder();
     }
 
     public function testExecute(): void
@@ -79,11 +94,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
 }
 EOT;
         $this->prepareSuccessTest(200, [], $expectedBody);
-        $this->commandTester->execute(
-            [
-                '--upload-package' => true,
-            ]
-        );
+        $this->commandTester->execute(['--upload-package' => true]);
 
         Assert::assertStringContainsString(
             '[OK] Successfully created language packages for Mautic!',
@@ -96,47 +107,47 @@ EOT;
         return preg_replace('/  +/', ' ', str_replace(PHP_EOL, '', $this->commandTester->getDisplay()));
     }
 
-    private function prepareSuccessTest(
-        int $status = 200,
-        array $headers = [],
-        $body = null
-    ): void {
+    private function prepareSuccessTest(int $status = 200, array $headers = [], $body = null): void
+    {
         $this->client->setResponse(new Response($status, $headers, $body));
     }
 
-    private function assertCorrectRequestAndResponse(
-        string $path,
-        string $method = 'GET',
-        int $code = 200,
-        string $body = ''
-    ): void {
-        self::assertCorrectRequestMethod($method, $this->client->getRequest()->getMethod());
-        self::assertCorrectRequestPath($path, $this->client->getRequest()->getUri()->getPath());
-        self::assertCorrectResponseCode($code, $this->client->getResponse()->getStatusCode());
-        Assert::assertSame($body, $this->client->getRequest()->getBody()->__toString());
+    private function backupTestTranslationsFolder(): void
+    {
+        $translationsBckDir = $this->getTranslationsBackupDir();
+        $this->filesystem->remove($translationsBckDir);
+        $this->filesystem->rename($this->translationsDir, $translationsBckDir);
+        $this->filesystem->mkdir($this->translationsDir);
     }
 
-    private static function assertCorrectRequestMethod(
-        string $expected,
-        string $actual,
-        string $message = 'The API did not use the right HTTP method.'
-    ): void {
-        Assert::assertSame($expected, $actual, $message);
+    private function restoreTestTranslationsFolder(): void
+    {
+        $translationsBckDir = $this->getTranslationsBackupDir();
+        $this->filesystem->remove($this->translationsDir);
+        $this->filesystem->rename($translationsBckDir, $this->translationsDir);
     }
 
-    private static function assertCorrectRequestPath(
-        string $expected,
-        string $actual,
-        string $message = 'The API did not request the right endpoint.'
-    ): void {
-        Assert::assertSame($expected, $actual, $message);
+    private function removeExtraPackagesFolder(): void
+    {
+        $packagesDirFinder = (new Finder())->depth(0)->in($this->packagesDir);
+
+        foreach ($packagesDirFinder as $item) {
+            if (
+                ($item->isDir() && '20230419055736' === $item->getFilename())
+                || ($item->isFile() && '20230419055736.txt' === $item->getFilename())
+            ) {
+                continue;
+            }
+
+            $this->filesystem->remove($item->getRealPath());
+        }
     }
 
-    private static function assertCorrectResponseCode(
-        int $expected,
-        int $actual,
-        string $message = 'The API did not return the right HTTP code.'
-    ): void {
-        Assert::assertSame($expected, $actual, $message);
+    private function getTranslationsBackupDir(): string
+    {
+        $pathParts = explode('/', $this->translationsDir);
+        array_pop($pathParts);
+
+        return implode('/', $pathParts).'/translations-bck';
     }
 }
