@@ -37,15 +37,15 @@ class MauticLanguagePackerCommand extends Command
             InputArgument::OPTIONAL | InputArgument::IS_ARRAY,
             'Languages that you want to skip (separate multiple languages with a space)'
         )->addOption(
-            'upload-package',
-            null,
-            InputOption::VALUE_NONE,
-            'Do you want to upload the package to AWS S3? Add --upload-package as argument.'
-        )->addOption(
             'language',
             null,
             InputOption::VALUE_REQUIRED,
             'Do you want to process a single language? Add e.g. `--language es` as argument.'
+        )->addOption(
+            'upload-package',
+            null,
+            InputOption::VALUE_NONE,
+            'Do you want to upload the package to AWS S3? Add --upload-package as argument.'
         );
     }
 
