@@ -63,10 +63,9 @@ EOT;
         $languageCode         = 'af';
         $bundle               = 'AddonBundle';
         $file                 = 'flashes';
-        $lastUpdate           = '2020-01-01 12:00:00';
+        $lastUpdate           = '2017-10-16T20:43:28Z';
 
-        $projectDir      = self::getContainer()->getParameter('kernel.project_dir');
-        $translationsDir = $projectDir.'/tests/Common/translations';
+        $translationsDir = self::getContainer()->getParameter('mlp.translations.dir');
         $bundlePath      = $translationsDir.'/'.$languageCode.'/'.$bundle;
 
         $symfonyStyleMock = $this->createMock(SymfonyStyle::class);
