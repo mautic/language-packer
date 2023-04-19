@@ -37,12 +37,12 @@ class TranslationSubscriberTest extends KernelTestCase
 
         $body = <<<EOT
 {
-    "data": {
-        "id": "7eab5699-6168-4d3f-87e4-414093e46bcf",
-        "links": {
-            "self": "https://rest.api.transifex.com/resource_translations_async_downloads/7eab5699-6168-4d3f-87e4-414093e46bcf"
-        }
+  "data": {
+    "id": "7eab5699-6168-4d3f-87e4-414093e46bcf",
+    "links": {
+      "self": "https://rest.api.transifex.com/resource_translations_async_downloads/7eab5699-6168-4d3f-87e4-414093e46bcf"
     }
+  }
 }
 EOT;
         $client->setResponse(new Response(200, [], $body));
@@ -56,25 +56,23 @@ EOT;
         $config->setOrganization('some-organization');
         $config->setProject('some-project');
 
-        $transifex = new Transifex(
-            $client, $requestFactory, $streamFactory, $uriFactory, $config
-        );
+        $transifex = new Transifex($client, $requestFactory, $streamFactory, $uriFactory, $config);
 
         $translationEventMock = $this->createMock(TranslationEvent::class);
         $slug                 = 'addonbundle-flashes';
-        $languageCode         = 'aa_DJ';
+        $languageCode         = 'af';
         $bundle               = 'AddonBundle';
-        $language             = 'aa_DJ';
+        $file                 = 'flashes';
         $lastUpdate           = '2020-01-01 12:00:00';
 
         $projectDir      = self::getContainer()->getParameter('kernel.project_dir');
         $translationsDir = $projectDir.'/tests/Common/translations';
-        $bundlePath      = $translationsDir.'/'.$language.'/'.$bundle;
+        $bundlePath      = $translationsDir.'/'.$languageCode.'/'.$bundle;
 
         $symfonyStyleMock = $this->createMock(SymfonyStyle::class);
         $translationEventMock->expects(self::once())->method('getIo')->willReturn($symfonyStyleMock);
 
-        $translationDTO = new TranslationDTO($slug, $languageCode, $translationsDir, $bundle, $language, $lastUpdate);
+        $translationDTO = new TranslationDTO($slug, $languageCode, $translationsDir, $bundle, $file, $lastUpdate);
         $translationEventMock->expects(self::once())->method('getTranslationDTO')->willReturn($translationDTO);
 
         $eventDispatcherMock = $this->createMock(EventDispatcherInterface::class);
@@ -83,10 +81,8 @@ EOT;
             PrepareDirEvent::NAME
         );
 
-        $filesystemMock = $this->createMock(Filesystem::class);
-
+        $filesystemMock        = $this->createMock(Filesystem::class);
         $translationSubscriber = new TranslationSubscriber($transifex, $eventDispatcherMock, $filesystemMock);
-
         $translationSubscriber->getTranslations($translationEventMock);
     }
 }

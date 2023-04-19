@@ -11,6 +11,7 @@ use Mautic\Transifex\TransifexInterface;
 use MauticLanguagePacker\Event\PrepareDirEvent;
 use MauticLanguagePacker\Event\TranslationEvent;
 use MauticLanguagePacker\Exception\InvalidFileException;
+use MauticLanguagePacker\Exception\RegexException;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -65,30 +66,15 @@ class TranslationSubscriber implements EventSubscriberInterface
                 $this->fulfillPromises($promise, $io);
                 $this->ensureFileValid($promise->getFilePath());
                 break;
-            } catch (ResponseException|InvalidFileException $exception) {
-                if ($exception instanceof InvalidFileException) {
-                    $attempt = $maxAttempts;
-                }
-
+            } catch (ResponseException $exception) {
                 if ($attempt === $maxAttempts) {
-                    $this->filesystem->appendToFile(
-                        $errorsFile,
-                        sprintf(
-                            'Encountered error during %1$s download. Error: %2$s.'.PHP_EOL.PHP_EOL,
-                            $filePath,
-                            $exception->getMessage()
-                        )
-                    );
-                    $io->error(
-                        sprintf(
-                            'Encountered error during %1$s download. Check %2$s!',
-                            $filePath,
-                            $errorsFile
-                        )
-                    );
+                    $this->outputErrors($io, $errorsFile, $filePath, $exception->getMessage());
                 }
 
                 sleep(2 ** $attempt);
+            } catch (InvalidFileException|RegexException $exception) {
+                $this->outputErrors($io, $errorsFile, $filePath, $exception->getMessage());
+                break;
             }
         }
     }
@@ -147,7 +133,7 @@ class TranslationSubscriber implements EventSubscriberInterface
         );
 
         if (null === $replaceCallback) {
-            throw new \RuntimeException('RegExp failed while trying to escape quotes.');
+            throw new RegexException('RegExp failed while trying to escape quotes.');
         }
 
         return $replaceCallback;
@@ -204,5 +190,24 @@ class TranslationSubscriber implements EventSubscriberInterface
         if (count($errors)) {
             throw new InvalidFileException("File $filePath has following errors:\n".implode(';', $errors));
         }
+    }
+
+    private function outputErrors(SymfonyStyle $io, string $errorsFile, string $filePath, string $message): void
+    {
+        $this->filesystem->appendToFile(
+            $errorsFile,
+            sprintf(
+                'Encountered error during %1$s download. Error: %2$s.'.PHP_EOL.PHP_EOL,
+                $filePath,
+                $message
+            )
+        );
+        $io->error(
+            sprintf(
+                'Encountered error during %1$s download. Check %2$s!',
+                $filePath,
+                $errorsFile
+            )
+        );
     }
 }
