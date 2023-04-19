@@ -1,0 +1,6 @@
+[
+    {
+        "name": "Afrikaans",
+        "code": "af"
+    }
+]

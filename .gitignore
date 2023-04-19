@@ -30,8 +30,6 @@
 ###> phpunit/phpunit ###
 /phpunit.xml
 .phpunit.result.cache
-/tests/Common/packages
-/tests/Common/translations
 ###< phpunit/phpunit ###
 
 ###> friendsofphp/php-cs-fixer ###
