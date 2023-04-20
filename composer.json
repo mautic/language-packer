@@ -27,7 +27,6 @@
     "phpstan/phpstan": "^1.10",
     "phpunit/phpunit": "^10.0",
     "rector/rector": "^0.15.24",
-    "squizlabs/php_codesniffer": "^3.7",
     "symfony/maker-bundle": "^1.48"
   },
   "config": {
@@ -63,8 +62,7 @@
       "cache:clear": "symfony-cmd",
       "assets:install %PUBLIC_DIR%": "symfony-cmd",
       "php -r \"if(file_exists('./.git')&&file_exists('./git-hooks/pre-commit'.(PHP_OS==='WINNT'?'.win':''))){copy('./git-hooks/pre-commit'.(PHP_OS==='WINNT'?'.win':''),'./.git/hooks/pre-commit');}if(file_exists('./.git')&&file_exists('./git-hooks/post-checkout'.(PHP_OS==='WINNT'?'.win':''))){copy('./git-hooks/post-checkout'.(PHP_OS==='WINNT'?'.win':''),'./.git/hooks/post-checkout');}\"": "script",
-      "php -r \"if((PHP_OS!=='WINNT')&&file_exists('./.git/hooks/pre-commit')){chmod('./.git/hooks/pre-commit',0755);}if((PHP_OS!=='WINNT')&&file_exists('./.git/hooks/post-checkout')){chmod('./.git/hooks/post-checkout',0755);}\"": "script",
-      "bin/phpcs --config-set installed_paths vendor/phpcompatibility/php-compatibility": "script"
+      "php -r \"if((PHP_OS!=='WINNT')&&file_exists('./.git/hooks/pre-commit')){chmod('./.git/hooks/pre-commit',0755);}if((PHP_OS!=='WINNT')&&file_exists('./.git/hooks/post-checkout')){chmod('./.git/hooks/post-checkout',0755);}\"": "script"
     },
     "post-install-cmd": [
       "@auto-scripts"
