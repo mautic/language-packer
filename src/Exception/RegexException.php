@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Exception;
+namespace App\Exception;
 
 class RegexException extends \Exception
 {

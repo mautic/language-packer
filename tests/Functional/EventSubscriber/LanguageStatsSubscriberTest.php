@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
+namespace App\Tests\Functional\EventSubscriber;
 
+use App\Event\LanguageStatsEvent;
+use App\Event\TranslationEvent;
+use App\EventSubscriber\LanguageStatsSubscriber;
+use App\Service\Transifex\DTO\TranslationDTO;
+use App\Tests\Common\Client\TransifexTestClient;
+use App\Tests\Common\Client\TransifexTrait;
 use GuzzleHttp\Psr7\Response;
-use MauticLanguagePacker\Event\DTO\TranslationDTO;
-use MauticLanguagePacker\Event\LanguageStatsEvent;
-use MauticLanguagePacker\Event\TranslationEvent;
-use MauticLanguagePacker\EventSubscriber\LanguageStatsSubscriber;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTestClient;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTrait;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Style\SymfonyStyle;

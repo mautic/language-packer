@@ -5,7 +5,7 @@ This is a command line utility to build installable language packages for Mautic
 
 ### General Notes
 
-The application configuration is stored at `.env` and should be filled prior to executing this script.  You can copy the `.env.dist` file to start with.
+The default application configuration is stored at `.env` and can be overridden by creating a `.env.local` file.
 
 ### Development Notes
 

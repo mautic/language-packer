@@ -41,12 +41,12 @@
   },
   "autoload": {
     "psr-4": {
-      "MauticLanguagePacker\\": "src/"
+      "App\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "MauticLanguagePacker\\Tests\\": "tests/"
+      "App\\Tests\\": "tests/"
     }
   },
   "replace": {

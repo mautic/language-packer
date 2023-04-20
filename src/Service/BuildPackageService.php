@@ -2,44 +2,40 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\EventSubscriber;
+namespace App\Service;
 
+use App\Service\Transifex\Connector\Languages;
+use App\Service\Transifex\DTO\PackageDTO;
+use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\TransifexInterface;
-use MauticLanguagePacker\Event\CreatePackageEvent;
-use MauticLanguagePacker\Transifex\Connector\Languages;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
-class CreatePackageSubscriber implements EventSubscriberInterface
+class BuildPackageService
 {
     public function __construct(
         private readonly TransifexInterface $transifex,
-        private readonly Filesystem $filesystem
+        private readonly Filesystem $filesystem,
+        private readonly LoggerInterface $logger
     ) {
     }
 
-    public static function getSubscribedEvents(): array
+    public function build(PackageDTO $packageDTO): int
     {
-        return [CreatePackageEvent::NAME => 'createPackage'];
-    }
-
-    public function createPackage(CreatePackageEvent $event): void
-    {
-        $io                   = $event->getIo();
-        $filterLanguages      = $event->getFilterLanguages();
-        $translationsDir      = $event->getTranslationsDir();
-        $packagesTimestampDir = $event->getPackagesTimestampDir();
-
-        $translationsDirFinder = (new Finder())->sortByName()->depth(0)->directories()->in($translationsDir);
+        $translationsDirFinder = (new Finder())->sortByName()->depth(0)->directories()->in(
+            $packageDTO->translationsDir
+        );
 
         $languageData = [];
 
+        $error = 0;
+
         foreach ($translationsDirFinder as $folder) {
             $languageCode = $folder->getBasename();
-            $languageDir  = $translationsDir.'/'.$languageCode;
+            $languageDir  = $packageDTO->translationsDir.'/'.$languageCode;
 
-            if (in_array($languageCode, $filterLanguages, true)) {
+            if (in_array($languageCode, $packageDTO->filterLanguages, true)) {
                 continue;
             }
 
@@ -48,10 +44,23 @@ class CreatePackageSubscriber implements EventSubscriberInterface
                 continue;
             }
 
-            $languageDetails    = $this->transifex->getConnector(Languages::class);
-            $response           = $languageDetails->getLanguageDetails($languageCode);
-            $statistics         = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
-            $languageAttributes = $statistics['data']['attributes'] ?? [];
+            try {
+                $languageDetails    = $this->transifex->getConnector(Languages::class);
+                $response           = $languageDetails->getLanguageDetails($languageCode);
+                $statistics         = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+                $languageAttributes = $statistics['data']['attributes'] ?? [];
+            } catch (ResponseException $exception) {
+                $this->logger->error(
+                    sprintf(
+                        'Encountered error during fetching language "%1$s" details for package build. Error: %2$s',
+                        $languageCode,
+                        $exception->getMessage()
+                    )
+                );
+                $error = 1;
+
+                continue;
+            }
 
             if (empty($languageAttributes)) {
                 continue;
@@ -70,19 +79,24 @@ class CreatePackageSubscriber implements EventSubscriberInterface
             // Hack so we produce exactly the same zip file on each run
             $this->produceSameZipEachTime($languageDir);
 
-            $this->createZipPackage($languageDir, $packagesTimestampDir, $languageCode);
+            $this->createZipPackage($languageDir, $packageDTO->packagesTimestampDir, $languageCode);
 
             // Store the metadata file outside the zip too for easier manipulation with scripts
-            $this->filesystem->copy($languageDir.'/config.json', $packagesTimestampDir.'/'.$languageCode.'.json');
+            $this->filesystem->copy(
+                $languageDir.'/config.json',
+                $packageDTO->packagesTimestampDir.'/'.$languageCode.'.json'
+            );
 
-            $io->writeln('<info>'.sprintf('Creating package for "%s" language.', $languageDir).'</info>');
+            $this->logger->info(sprintf('Creating package for "%1$s" language.', $languageDir));
         }
 
         // Store the lang data as a backup
         $this->filesystem->dumpFile(
-            $packagesTimestampDir.'.txt',
+            $packageDTO->packagesTimestampDir.'.txt',
             json_encode($languageData, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)
         );
+
+        return $error;
     }
 
     private function renderConfig(array $data): string

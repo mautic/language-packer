@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
+namespace App\Tests\Functional\EventSubscriber;
 
+use App\Event\CreatePackageEvent;
+use App\EventSubscriber\CreatePackageSubscriber;
+use App\Tests\Common\Client\TransifexTestClient;
+use App\Tests\Common\Client\TransifexTrait;
 use GuzzleHttp\Psr7\Response;
-use MauticLanguagePacker\Event\CreatePackageEvent;
-use MauticLanguagePacker\EventSubscriber\CreatePackageSubscriber;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTestClient;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTrait;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Style\SymfonyStyle;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Functional\Command;
+namespace App\Tests\Functional\Command;
 
+use App\Command\MauticLanguagePackerCommand;
+use App\Tests\Common\Client\TransifexTestClient;
 use GuzzleHttp\Psr7\Response;
-use MauticLanguagePacker\Command\MauticLanguagePackerCommand;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTestClient;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Application;

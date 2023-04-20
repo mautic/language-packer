@@ -1,9 +1,9 @@
 aws:
-  version: latest
-  region: us-east-1
+  version: '%env(AWS_VERSION)%'
+  region: '%env(AWS_REGION)%'
   credentials:
-    key: "%mlp.aws.key%"
-    secret: "%mlp.aws.secret%"
+    key: "%env(AWS_KEY)%"
+    secret: "%env(AWS_SECRET)%"
   S3:
-    version: 'latest'
-    region: '%mlp.aws.region%'
+    version: '%env(AWS_S3_VERSION)%'
+    region: '%env(AWS_S3_REGION)%'

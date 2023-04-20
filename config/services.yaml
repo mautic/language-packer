@@ -6,13 +6,6 @@
 parameters:
   mlp.packages.dir: '%kernel.project_dir%/packages'
   mlp.translations.dir: '%kernel.project_dir%/translations'
-  mlp.transifex.api.token: '%env(TRANSIFEX_API_TOKEN)%'
-  mlp.transifex.organisation: '%env(TRANSIFEX_ORGANISATION)%'
-  mlp.transifex.project: '%env(TRANSIFEX_PROJECT)%'
-  mlp.aws.key: '%env(AWS_KEY)%'
-  mlp.aws.secret: '%env(AWS_SECRET)%'
-  mlp.aws.region: '%env(AWS_REGION)%'
-  mlp.aws.bucket: '%env(AWS_BUCKET)%'
 
 services: # default configuration for services in *this* file
   _defaults:
@@ -21,7 +14,7 @@ services: # default configuration for services in *this* file
 
   # makes classes in src/ available to be used as services
   # this creates a service per class whose id is the fully-qualified class name
-  MauticLanguagePacker\:
+  App\:
     resource: '../src/'
     exclude:
       - '../src/DependencyInjection/'
@@ -31,13 +24,24 @@ services: # default configuration for services in *this* file
   # add more service definitions when explicit configuration is needed
   # please note that last definitions always *replace* previous ones
 
-  mautic.transifex:
-    class: Mautic\Transifex\Transifex
-    factory: [ 'MauticLanguagePacker\Factory\TransifexFactory', 'create' ]
-    arguments:
-      $apiToken: '%mlp.transifex.api.token%'
-      $organisation: '%mlp.transifex.organisation%'
-      $project: '%mlp.transifex.project%'
+  Psr\Http\Client\ClientInterface:
+    class: GuzzleHttp\Client
+
+  Psr\Http\Message\RequestFactoryInterface:
+    class: Http\Factory\Guzzle\RequestFactory
+
+  Psr\Http\Message\StreamFactoryInterface:
+    class: Http\Factory\Guzzle\StreamFactory
+
+  Psr\Http\Message\UriFactoryInterface:
+    class: Http\Factory\Guzzle\UriFactory
+
+  Mautic\Transifex\ConfigInterface:
+    class: Mautic\Transifex\Config
+    calls:
+      - [ 'setApiToken', [ '%env(TRANSIFEX_API_TOKEN)%' ] ]
+      - [ 'setOrganization', [ '%env(TRANSIFEX_ORGANISATION)%' ] ]
+      - [ 'setProject', [ '%env(TRANSIFEX_PROJECT)%' ] ]
 
   Mautic\Transifex\TransifexInterface:
-    alias: 'mautic.transifex'
+    class: Mautic\Transifex\Transifex

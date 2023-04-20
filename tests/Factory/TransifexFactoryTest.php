@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Factory;
+namespace App\Tests\Factory;
 
-use MauticLanguagePacker\Factory\TransifexFactory;
+use App\Factory\TransifexFactory;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 

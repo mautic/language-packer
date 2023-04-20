@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Transifex\Connector;
+namespace App\Service\Transifex\Connector;
 
 use Mautic\Transifex\ApiConnector;
 use Psr\Http\Message\ResponseInterface;

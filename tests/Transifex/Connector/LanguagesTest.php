@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Transifex\Connector;
+namespace App\Tests\Transifex\Connector;
 
+use App\Service\Transifex\Connector\Languages;
+use App\Tests\Common\Client\TransifexTestClient;
 use GuzzleHttp\Psr7\Response;
 use Http\Factory\Guzzle\RequestFactory;
 use Http\Factory\Guzzle\StreamFactory;
 use Http\Factory\Guzzle\UriFactory;
 use Mautic\Transifex\Config;
 use Mautic\Transifex\Transifex;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTestClient;
-use MauticLanguagePacker\Transifex\Connector\Languages;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 

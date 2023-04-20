@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
+namespace App\Tests\Functional\EventSubscriber;
 
-use MauticLanguagePacker\Event\PrepareDirEvent;
-use MauticLanguagePacker\EventSubscriber\PrepareDirSubscriber;
+use App\Event\PrepareDirEvent;
+use App\EventSubscriber\PrepareDirSubscriber;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Filesystem\Filesystem;

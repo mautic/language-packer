@@ -2,84 +2,64 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\EventSubscriber;
+namespace App\Service\Transifex;
 
+use App\Exception\InvalidFileException;
+use App\Exception\RegexException;
+use App\Service\Transifex\DTO\TranslationDTO;
 use Mautic\Transifex\Connector\Translations;
 use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\Promise;
 use Mautic\Transifex\TransifexInterface;
-use MauticLanguagePacker\Event\PrepareDirEvent;
-use MauticLanguagePacker\Event\TranslationEvent;
-use MauticLanguagePacker\Exception\InvalidFileException;
-use MauticLanguagePacker\Exception\RegexException;
 use Psr\Http\Message\ResponseInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
-class TranslationSubscriber implements EventSubscriberInterface
+class TranslationsService
 {
     public function __construct(
         private readonly TransifexInterface $transifex,
-        private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly Filesystem $filesystem
+        private readonly Filesystem $filesystem,
+        private readonly LoggerInterface $logger
     ) {
     }
 
-    public static function getSubscribedEvents(): array
+    public function getTranslations(TranslationDTO $translationDTO): void
     {
-        return [TranslationEvent::NAME => 'getTranslations'];
-    }
+        $bundlePath = $translationDTO->translationsDir.'/'.$translationDTO->language.'/'.$translationDTO->bundle;
+        $filePath   = $bundlePath.'/'.$translationDTO->file.'.ini';
 
-    public function getTranslations(TranslationEvent $event): void
-    {
-        $io             = $event->getIo();
-        $translationDTO = $event->getTranslationDTO();
-
-        $slug            = $translationDTO->getSlug();
-        $language        = $translationDTO->getLanguage();
-        $translationsDir = $translationDTO->getTranslationsDir();
-        $bundle          = $translationDTO->getBundle();
-        $file            = $translationDTO->getFile();
-        $lastUpdate      = $translationDTO->getLastUpdate();
-
-        $bundlePath = $translationsDir.'/'.$language.'/'.$bundle;
-        $filePath   = $bundlePath.'/'.$file.'.ini';
-        $errorsFile = $translationsDir.'/errors.txt';
-
-        $prepareDirEvent = new PrepareDirEvent($bundlePath);
-        $this->eventDispatcher->dispatch($prepareDirEvent, PrepareDirEvent::NAME);
+        $this->filesystem->mkdir($bundlePath);
 
         // Set the timestamp on the file so our zip builds are reproducible
-        $this->filesystem->touch($bundlePath, strtotime($lastUpdate));
-        $this->filesystem->touch($filePath, strtotime($lastUpdate));
+        $this->filesystem->touch($bundlePath, strtotime($translationDTO->lastUpdate));
+        $this->filesystem->touch($filePath, strtotime($translationDTO->lastUpdate));
 
         $maxAttempts = 3;
 
         for ($attempt = 1; $attempt <= $maxAttempts; ++$attempt) {
             try {
                 $translations = $this->transifex->getConnector(Translations::class);
-                $response     = $translations->download($slug, $language);
+                $response     = $translations->download($translationDTO->slug, $translationDTO->language);
                 $promise      = $this->transifex->getApiConnector()->createPromise($response);
                 $promise->setFilePath($filePath);
-                $this->fulfillPromises($promise, $io);
+                $this->fulfillPromises($promise);
                 $this->ensureFileValid($promise->getFilePath());
                 break;
             } catch (ResponseException $exception) {
                 if ($attempt === $maxAttempts) {
-                    $this->outputErrors($io, $errorsFile, $filePath, $exception->getMessage());
+                    $this->outputErrors($filePath, $exception->getMessage());
                 }
 
                 sleep(2 ** $attempt);
             } catch (InvalidFileException|RegexException $exception) {
-                $this->outputErrors($io, $errorsFile, $filePath, $exception->getMessage());
+                $this->outputErrors($filePath, $exception->getMessage());
                 break;
             }
         }
     }
 
-    private function fulfillPromises(Promise $promise, SymfonyStyle $io): void
+    private function fulfillPromises(Promise $promise): void
     {
         $promises = new \SplQueue();
         $promises->enqueue($promise);
@@ -90,8 +70,7 @@ class TranslationSubscriber implements EventSubscriberInterface
             $promises,
             function (ResponseInterface $response) use (
                 &$translationContent,
-                $promise,
-                $io
+                $promise
             ) {
                 $filePath           = $promise->getFilePath();
                 $translationContent = $response->getBody()->__toString();
@@ -99,20 +78,20 @@ class TranslationSubscriber implements EventSubscriberInterface
 
                 // Write the file to the system
                 $this->filesystem->dumpFile($filePath, $escapedContent);
-                $io->writeln(
-                    '<info>'.sprintf(
+                $this->logger->info(
+                    sprintf(
                         'Translation for %1$s was downloaded successfully!',
                         $filePath
-                    ).'</info>'
+                    )
                 );
             },
-            function (ResponseException $exception) use ($promise, $io) {
-                $io->writeln(
-                    '<error>'.sprintf(
+            function (ResponseException $exception) use ($promise) {
+                $this->logger->error(
+                    sprintf(
                         'Translation download for %1$s failed with %2$s.',
                         $promise->getFilePath(),
                         $exception->getMessage()
-                    ).'</error>'
+                    )
                 );
             }
         );
@@ -192,22 +171,8 @@ class TranslationSubscriber implements EventSubscriberInterface
         }
     }
 
-    private function outputErrors(SymfonyStyle $io, string $errorsFile, string $filePath, string $message): void
+    private function outputErrors(string $filePath, string $message): void
     {
-        $this->filesystem->appendToFile(
-            $errorsFile,
-            sprintf(
-                'Encountered error during %1$s download. Error: %2$s.'.PHP_EOL.PHP_EOL,
-                $filePath,
-                $message
-            )
-        );
-        $io->error(
-            sprintf(
-                'Encountered error during %1$s download. Check %2$s!',
-                $filePath,
-                $errorsFile
-            )
-        );
+        $this->logger->error(sprintf('Encountered error during "%1$s" download. Error: %2$s', $filePath, $message));
     }
 }

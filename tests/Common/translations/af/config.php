@@ -1,8 +1,9 @@
 <?php
+
 $config = [
-	'name' => 'Afrikaans',
-	'locale' => 'af',
-	'author' => 'Mautic Translators',
+    'name'   => 'Afrikaans',
+    'locale' => 'af',
+    'author' => 'Mautic Translators',
 ];
 
 return $config;

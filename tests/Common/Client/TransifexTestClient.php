@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Common\Client;
+namespace App\Tests\Common\Client;
 
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;

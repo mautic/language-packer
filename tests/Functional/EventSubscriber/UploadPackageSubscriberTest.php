@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
+namespace App\Tests\Functional\EventSubscriber;
 
+use App\Event\UploadPackageEvent;
+use App\EventSubscriber\UploadPackageSubscriber;
 use Aws\S3\S3Client;
-use MauticLanguagePacker\Event\UploadPackageEvent;
-use MauticLanguagePacker\EventSubscriber\UploadPackageSubscriber;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Style\SymfonyStyle;

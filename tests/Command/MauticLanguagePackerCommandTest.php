@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Command;
+namespace App\Tests\Command;
 
-use MauticLanguagePacker\Command\MauticLanguagePackerCommand;
+use App\Command\MauticLanguagePackerCommand;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Application;
@@ -40,7 +40,7 @@ class MauticLanguagePackerCommandTest extends TestCase
     ): void {
         $this->parameterBagMock->method('get')->willReturnMap(
             [
-                ['mlp.transifex.api.token', $apiToken],
+                ['TRANSIFEX_API_TOKEN', $apiToken],
                 ['mlp.transifex.organisation', $organisation],
                 ['mlp.transifex.project', $project],
             ]
@@ -75,7 +75,7 @@ class MauticLanguagePackerCommandTest extends TestCase
     ): void {
         $this->parameterBagMock->method('get')->willReturnMap(
             [
-                ['mlp.transifex.api.token', 'some_api_token'],
+                ['TRANSIFEX_API_TOKEN', 'some_api_token'],
                 ['mlp.transifex.organisation', 'some_organisation'],
                 ['mlp.transifex.project', 'some_project'],
                 ['mlp.packages.dir', 'some_packages_dir'],

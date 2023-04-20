@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Command;
+namespace App\Command;
 
-use MauticLanguagePacker\Event\CreatePackageEvent;
-use MauticLanguagePacker\Event\PrepareDirEvent;
-use MauticLanguagePacker\Event\ResourceEvent;
-use MauticLanguagePacker\Event\UploadPackageEvent;
+use App\Service\BuildPackageService;
+use App\Service\Transifex\DTO\PackageDTO;
+use App\Service\Transifex\DTO\ResourceDTO;
+use App\Service\Transifex\DTO\UploadPackageDTO;
+use App\Service\Transifex\ResourcesService;
+use App\Service\UploadPackageService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -16,7 +18,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 #[AsCommand(name: self::NAME, description: 'Creates language packages for Mautic releases')]
 class MauticLanguagePackerCommand extends Command
@@ -25,7 +27,10 @@ class MauticLanguagePackerCommand extends Command
 
     public function __construct(
         private readonly ParameterBagInterface $parameterBag,
-        private readonly EventDispatcherInterface $eventDispatcher
+        private readonly Filesystem $filesystem,
+        private readonly ResourcesService $resourcesService,
+        private readonly BuildPackageService $buildPackageService,
+        private readonly UploadPackageService $uploadPackageService
     ) {
         parent::__construct();
     }
@@ -53,11 +58,7 @@ class MauticLanguagePackerCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        if (
-            !$this->parameterBag->get('mlp.transifex.api.token')
-            || !$this->parameterBag->get('mlp.transifex.organisation')
-            || !$this->parameterBag->get('mlp.transifex.project')
-        ) {
+        if (!$_ENV['TRANSIFEX_API_TOKEN'] || !$_ENV['TRANSIFEX_ORGANISATION'] || !$_ENV['TRANSIFEX_PROJECT']) {
             $io->error('Add TRANSIFEX_API_TOKEN, TRANSIFEX_ORGANISATION and TRANSIFEX_PROJECT in .env.');
 
             return Command::FAILURE;
@@ -67,61 +68,52 @@ class MauticLanguagePackerCommand extends Command
         $translationsDir = $this->parameterBag->get('mlp.translations.dir');
 
         $filterLanguages = $input->getArgument('filter-languages');
-        $uploadPackage   = $input->getOption('upload-package');
         $language        = $input->getOption('language') ?? '';
+        $uploadPackage   = $input->getOption('upload-package');
 
         // Remove any previous pulls and rebuild the translations folder
-        $translationsDirEvent = new PrepareDirEvent($translationsDir, true);
-        $this->eventDispatcher->dispatch($translationsDirEvent, PrepareDirEvent::NAME);
+        $this->filesystem->remove($translationsDir);
+        $this->filesystem->mkdir($translationsDir);
 
         // Fetch the project resources now and store them locally
-        $resourceEvent = new ResourceEvent($io, $filterLanguages, $translationsDir, $language);
-        $this->eventDispatcher->dispatch($resourceEvent, ResourceEvent::NAME);
+        $resourceDTO   = new ResourceDTO($translationsDir, $filterLanguages, $language);
+        $resourceError = $this->resourcesService->processAllResources($resourceDTO);
+
+        if ($resourceError) {
+            $io->error('Encountered error during fetching all resources.');
+
+            return Command::FAILURE;
+        }
 
         // Now we start building our ZIP archives
-        $packagesDirEvent = new PrepareDirEvent($packagesDir);
-        $this->eventDispatcher->dispatch($packagesDirEvent, PrepareDirEvent::NAME);
+        $this->filesystem->mkdir($packagesDir);
 
         // Add a folder for our current build
         $timestamp            = (new \DateTime())->format('YmdHis');
         $packagesTimestampDir = $packagesDir.'/'.$timestamp;
-        $packages2DirEvent    = new PrepareDirEvent($packagesTimestampDir);
-        $this->eventDispatcher->dispatch($packages2DirEvent, PrepareDirEvent::NAME);
+        $this->filesystem->mkdir($packagesTimestampDir);
 
         // Compile our data to forward to mautic.org and build the ZIP packages
-        $createPackageEvent = new CreatePackageEvent($io, $filterLanguages, $translationsDir, $packagesTimestampDir);
-        $this->eventDispatcher->dispatch($createPackageEvent, CreatePackageEvent::NAME);
+        $resourceDTO = new PackageDTO($translationsDir, $filterLanguages, $packagesTimestampDir);
+        $buildError  = $this->buildPackageService->build($resourceDTO);
 
-        $errorsFile = $translationsDir.'/errors.txt';
-
-        if (file_exists($errorsFile)) {
-            $io->warning(
-                sprintf('Created language packages for Mautic. Check %1$s as there were errors!', $errorsFile)
-            );
+        if ($buildError) {
+            $io->warning('Created language packages for Mautic with some errors.');
         } else {
             $io->success('Successfully created language packages for Mautic!');
         }
 
         // If instructed, upload the packages
         if ($uploadPackage) {
-            $io->info('Starting package upload to AWS S3, checking credentials.');
-            if (
-                !$this->parameterBag->get('mlp.aws.key')
-                || !$this->parameterBag->get('mlp.aws.secret')
-                || !$this->parameterBag->get('mlp.aws.region')
-                || !$this->parameterBag->get('mlp.aws.bucket')
-            ) {
-                $io->error('Add AWS_KEY, AWS_SECRET, AWS_REGION and AWS_BUCKET in .env.');
+            $io->info('Starting package upload to AWS S3');
+            $uploadPackageDTO = new UploadPackageDTO($packagesTimestampDir, $_ENV['AWS_S3_BUCKET']);
+            $uploadError      = $this->uploadPackageService->uploadPackage($uploadPackageDTO);
+
+            if ($uploadError) {
+                $io->error('Encountered error during language packages upload to AWS S3.');
 
                 return Command::FAILURE;
             }
-
-            $uploadPackageEvent = new UploadPackageEvent(
-                $io,
-                $packagesTimestampDir,
-                $this->parameterBag->get('mlp.aws.bucket')
-            );
-            $this->eventDispatcher->dispatch($uploadPackageEvent, UploadPackageEvent::NAME);
 
             $io->success('Successfully uploaded language packages to AWS S3!');
         }

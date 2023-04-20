@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace MauticLanguagePacker\Tests\Functional\EventSubscriber;
+namespace App\Tests\Functional\EventSubscriber;
 
+use App\Event\LanguageStatsEvent;
+use App\Event\ResourceEvent;
+use App\EventSubscriber\ResourceSubscriber;
+use App\Tests\Common\Client\TransifexTestClient;
+use App\Tests\Common\Client\TransifexTrait;
 use GuzzleHttp\Psr7\Response;
-use MauticLanguagePacker\Event\LanguageStatsEvent;
-use MauticLanguagePacker\Event\ResourceEvent;
-use MauticLanguagePacker\EventSubscriber\ResourceSubscriber;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTestClient;
-use MauticLanguagePacker\Tests\Common\Client\TransifexTrait;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Style\SymfonyStyle;
