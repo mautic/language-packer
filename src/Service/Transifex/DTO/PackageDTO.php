@@ -6,6 +6,9 @@ namespace App\Service\Transifex\DTO;
 
 class PackageDTO
 {
+    /**
+     * @param array<string> $filterLanguages
+     */
     public function __construct(
         public readonly string $translationsDir,
         public readonly array $filterLanguages,

@@ -8,20 +8,17 @@ use App\Service\Transifex\Connector\Languages;
 use App\Service\Transifex\DTO\PackageDTO;
 use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\TransifexInterface;
-use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
 class BuildPackageService
 {
-    public function __construct(
-        private readonly TransifexInterface $transifex,
-        private readonly Filesystem $filesystem,
-        private readonly LoggerInterface $logger
-    ) {
+    public function __construct(private readonly TransifexInterface $transifex, private readonly Filesystem $filesystem)
+    {
     }
 
-    public function build(PackageDTO $packageDTO): int
+    public function build(PackageDTO $packageDTO, ConsoleLogger $logger): int
     {
         $translationsDirFinder = (new Finder())->sortByName()->depth(0)->directories()->in(
             $packageDTO->translationsDir
@@ -50,7 +47,7 @@ class BuildPackageService
                 $statistics         = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
                 $languageAttributes = $statistics['data']['attributes'] ?? [];
             } catch (ResponseException $exception) {
-                $this->logger->error(
+                $logger->error(
                     sprintf(
                         'Encountered error during fetching language "%1$s" details for package build. Error: %2$s',
                         $languageCode,
@@ -87,7 +84,7 @@ class BuildPackageService
                 $packageDTO->packagesTimestampDir.'/'.$languageCode.'.json'
             );
 
-            $this->logger->info(sprintf('Creating package for "%1$s" language.', $languageDir));
+            $logger->info(sprintf('Creating package for "%1$s" language.', $languageDir));
         }
 
         // Store the lang data as a backup
@@ -99,6 +96,9 @@ class BuildPackageService
         return $error;
     }
 
+    /**
+     * @param array<string, string> $data
+     */
     private function renderConfig(array $data): string
     {
         $string = "<?php\n";

@@ -7,16 +7,16 @@ namespace App\Service;
 use App\Service\Transifex\DTO\UploadPackageDTO;
 use Aws\S3\S3Client;
 use GuzzleHttp\Exception\ConnectException;
-use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Finder\Finder;
 
 class UploadPackageService
 {
-    public function __construct(private readonly S3Client $client, private readonly LoggerInterface $logger)
+    public function __construct(private readonly S3Client $client)
     {
     }
 
-    public function uploadPackage(UploadPackageDTO $uploadPackageDTO): int
+    public function uploadPackage(UploadPackageDTO $uploadPackageDTO, ConsoleLogger $logger): int
     {
         $packagesTimestampDirFinder = (new Finder())->sortByName()->depth(0)->files()->in(
             $uploadPackageDTO->packagesTimestampDir
@@ -32,7 +32,7 @@ class UploadPackageService
             try {
                 $this->client->deleteMatchingObjects($uploadPackageDTO->s3Bucket, $key);
             } catch (\Exception $exception) {
-                $this->logger->error(
+                $logger->error(
                     sprintf(
                         'Encountered error during "%1$s" deletion of previous matching objects in AWS S3. Error: %2$s',
                         $fileName,
@@ -52,12 +52,20 @@ class UploadPackageService
                         'ACL'        => 'public-read',
                     ]
                 );
-                $this->logger->info(
-                    sprintf('Uploaded %1$s to AWS S3, URL: %2$s.', $file->getRealPath(), $result->get('ObjectURL'))
+                $logger->info(
+                    sprintf(
+                        'Uploaded %1$s to AWS S3, URL: %2$s.',
+                        $file->getRealPath(),
+                        $result->get('ObjectURL')
+                    )
                 );
             } catch (ConnectException $exception) {
-                $this->logger->error(
-                    sprintf('Encountered error during "%1$s" upload. Error: %2$s', $fileName, $exception->getMessage())
+                $logger->error(
+                    sprintf(
+                        'Encountered error during "%1$s" upload. Error: %2$s',
+                        $fileName,
+                        $exception->getMessage()
+                    )
                 );
                 $error = 1;
                 continue;

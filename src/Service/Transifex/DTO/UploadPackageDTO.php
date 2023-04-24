@@ -6,9 +6,7 @@ namespace App\Service\Transifex\DTO;
 
 class UploadPackageDTO
 {
-    public function __construct(
-        public readonly string $packagesTimestampDir,
-        public readonly string $s3Bucket
-    ) {
+    public function __construct(public readonly string $packagesTimestampDir, public readonly string $s3Bucket)
+    {
     }
 }

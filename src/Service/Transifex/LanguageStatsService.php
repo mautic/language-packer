@@ -9,18 +9,17 @@ use App\Service\Transifex\DTO\TranslationDTO;
 use Mautic\Transifex\Connector\Statistics;
 use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\TransifexInterface;
-use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 
 class LanguageStatsService
 {
     public function __construct(
         private readonly TransifexInterface $transifex,
-        private readonly TranslationsService $translationsService,
-        private readonly LoggerInterface $logger
+        private readonly TranslationsService $translationsService
     ) {
     }
 
-    public function getStatistics(ResourceDTO $resourceDTO): void
+    public function getStatistics(ResourceDTO $resourceDTO, ConsoleLogger $logger): void
     {
         // Split the name to create our file name
         [$bundle, $file] = explode(' ', $resourceDTO->resourceName);
@@ -35,7 +34,7 @@ class LanguageStatsService
             $statistics    = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
             $languageStats = $statistics['data'] ?? [];
         } catch (ResponseException $exception) {
-            $this->logger->error(
+            $logger->error(
                 sprintf(
                     'Encountered error during fetching statistics for "%1$s" resource of "%2$s" language. Error: %3$s',
                     $resourceDTO->resourceSlug,
@@ -59,7 +58,7 @@ class LanguageStatsService
                 continue;
             }
 
-            $this->logger->info(
+            $logger->info(
                 sprintf(
                     'Processing the %1$s "%2$s" resource in "%3$s" language.',
                     $bundle,
@@ -75,8 +74,7 @@ class LanguageStatsService
                 $file,
                 $lastUpdate
             );
-            $this->translationsService->getTranslations($translationDTO);
-            break;
+            $this->translationsService->getTranslations($translationDTO, $logger);
         }
     }
 }

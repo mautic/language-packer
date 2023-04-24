@@ -12,19 +12,16 @@ use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\Promise;
 use Mautic\Transifex\TransifexInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Filesystem\Filesystem;
 
 class TranslationsService
 {
-    public function __construct(
-        private readonly TransifexInterface $transifex,
-        private readonly Filesystem $filesystem,
-        private readonly LoggerInterface $logger
-    ) {
+    public function __construct(private readonly TransifexInterface $transifex, private readonly Filesystem $filesystem)
+    {
     }
 
-    public function getTranslations(TranslationDTO $translationDTO): void
+    public function getTranslations(TranslationDTO $translationDTO, ConsoleLogger $logger): void
     {
         $bundlePath = $translationDTO->translationsDir.'/'.$translationDTO->language.'/'.$translationDTO->bundle;
         $filePath   = $bundlePath.'/'.$translationDTO->file.'.ini';
@@ -43,23 +40,23 @@ class TranslationsService
                 $response     = $translations->download($translationDTO->slug, $translationDTO->language);
                 $promise      = $this->transifex->getApiConnector()->createPromise($response);
                 $promise->setFilePath($filePath);
-                $this->fulfillPromises($promise);
+                $this->fulfillPromises($promise, $logger);
                 $this->ensureFileValid($promise->getFilePath());
                 break;
             } catch (ResponseException $exception) {
                 if ($attempt === $maxAttempts) {
-                    $this->outputErrors($filePath, $exception->getMessage());
+                    $this->outputErrors($logger, $filePath, $exception->getMessage());
                 }
 
                 sleep(2 ** $attempt);
             } catch (InvalidFileException|RegexException $exception) {
-                $this->outputErrors($filePath, $exception->getMessage());
+                $this->outputErrors($logger, $filePath, $exception->getMessage());
                 break;
             }
         }
     }
 
-    private function fulfillPromises(Promise $promise): void
+    private function fulfillPromises(Promise $promise, ConsoleLogger $logger): void
     {
         $promises = new \SplQueue();
         $promises->enqueue($promise);
@@ -70,7 +67,8 @@ class TranslationsService
             $promises,
             function (ResponseInterface $response) use (
                 &$translationContent,
-                $promise
+                $promise,
+                $logger
             ) {
                 $filePath           = $promise->getFilePath();
                 $translationContent = $response->getBody()->__toString();
@@ -78,15 +76,15 @@ class TranslationsService
 
                 // Write the file to the system
                 $this->filesystem->dumpFile($filePath, $escapedContent);
-                $this->logger->info(
+                $logger->info(
                     sprintf(
                         'Translation for %1$s was downloaded successfully!',
                         $filePath
                     )
                 );
             },
-            function (ResponseException $exception) use ($promise) {
-                $this->logger->error(
+            function (ResponseException $exception) use ($promise, $logger) {
+                $logger->error(
                     sprintf(
                         'Translation download for %1$s failed with %2$s.',
                         $promise->getFilePath(),
@@ -171,8 +169,8 @@ class TranslationsService
         }
     }
 
-    private function outputErrors(string $filePath, string $message): void
+    private function outputErrors(ConsoleLogger $logger, string $filePath, string $message): void
     {
-        $this->logger->error(sprintf('Encountered error during "%1$s" download. Error: %2$s', $filePath, $message));
+        $logger->error(sprintf('Encountered error during "%1$s" download. Error: %2$s', $filePath, $message));
     }
 }

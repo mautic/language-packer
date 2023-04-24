@@ -10,11 +10,13 @@ use App\Service\Transifex\DTO\ResourceDTO;
 use App\Service\Transifex\DTO\UploadPackageDTO;
 use App\Service\Transifex\ResourcesService;
 use App\Service\UploadPackageService;
+use Psr\Log\LogLevel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -56,13 +58,8 @@ class MauticLanguagePackerCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-
-        if (!$_ENV['TRANSIFEX_API_TOKEN'] || !$_ENV['TRANSIFEX_ORGANISATION'] || !$_ENV['TRANSIFEX_PROJECT']) {
-            $io->error('Add TRANSIFEX_API_TOKEN, TRANSIFEX_ORGANISATION and TRANSIFEX_PROJECT in .env.');
-
-            return Command::FAILURE;
-        }
+        $io     = new SymfonyStyle($input, $output);
+        $logger = $this->getConsoleLogger($output);
 
         $packagesDir     = $this->parameterBag->get('mlp.packages.dir');
         $translationsDir = $this->parameterBag->get('mlp.translations.dir');
@@ -77,7 +74,7 @@ class MauticLanguagePackerCommand extends Command
 
         // Fetch the project resources now and store them locally
         $resourceDTO   = new ResourceDTO($translationsDir, $filterLanguages, $language);
-        $resourceError = $this->resourcesService->processAllResources($resourceDTO);
+        $resourceError = $this->resourcesService->processAllResources($resourceDTO, $logger);
 
         if ($resourceError) {
             $io->error('Encountered error during fetching all resources.');
@@ -94,8 +91,8 @@ class MauticLanguagePackerCommand extends Command
         $this->filesystem->mkdir($packagesTimestampDir);
 
         // Compile our data to forward to mautic.org and build the ZIP packages
-        $resourceDTO = new PackageDTO($translationsDir, $filterLanguages, $packagesTimestampDir);
-        $buildError  = $this->buildPackageService->build($resourceDTO);
+        $packageDTO = new PackageDTO($translationsDir, $filterLanguages, $packagesTimestampDir);
+        $buildError = $this->buildPackageService->build($packageDTO, $logger);
 
         if ($buildError) {
             $io->warning('Created language packages for Mautic with some errors.');
@@ -105,19 +102,27 @@ class MauticLanguagePackerCommand extends Command
 
         // If instructed, upload the packages
         if ($uploadPackage) {
-            $io->info('Starting package upload to AWS S3');
+            $io->info('Starting package upload to AWS S3.');
             $uploadPackageDTO = new UploadPackageDTO($packagesTimestampDir, $_ENV['AWS_S3_BUCKET']);
-            $uploadError      = $this->uploadPackageService->uploadPackage($uploadPackageDTO);
+            $uploadError      = $this->uploadPackageService->uploadPackage($uploadPackageDTO, $logger);
 
             if ($uploadError) {
                 $io->error('Encountered error during language packages upload to AWS S3.');
-
-                return Command::FAILURE;
+            } else {
+                $io->success('Successfully uploaded language packages to AWS S3!');
             }
-
-            $io->success('Successfully uploaded language packages to AWS S3!');
         }
 
         return Command::SUCCESS;
+    }
+
+    private function getConsoleLogger(OutputInterface $output): ConsoleLogger
+    {
+        $formatLevelMap = [
+            LogLevel::CRITICAL => ConsoleLogger::ERROR,
+            LogLevel::DEBUG    => ConsoleLogger::INFO,
+        ];
+
+        return new ConsoleLogger($output, [], $formatLevelMap);
     }
 }
