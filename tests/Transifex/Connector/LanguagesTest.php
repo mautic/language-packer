@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Transifex\Connector;
 
 use App\Service\Transifex\Connector\Languages;
-use App\Tests\Common\Client\TransifexTestClient;
-use GuzzleHttp\Psr7\Response;
+use App\Tests\Common\Client\MockResponse;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 use Http\Factory\Guzzle\RequestFactory;
 use Http\Factory\Guzzle\StreamFactory;
 use Http\Factory\Guzzle\UriFactory;
@@ -14,33 +16,11 @@ use Mautic\Transifex\Config;
 use Mautic\Transifex\Transifex;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
 
 final class LanguagesTest extends TestCase
 {
-    private Transifex $transifex;
-
-    private string $sampleString = '{"a":1,"b":2,"c":3,"d":4,"e":5}';
-
-    protected function setUp(): void
-    {
-        $this->client         = new TransifexTestClient();
-        $this->requestFactory = new RequestFactory();
-        $this->streamFactory  = new StreamFactory();
-        $this->uriFactory     = new UriFactory();
-        $this->config         = new Config();
-
-        $this->config->setApiToken('some-api-token');
-        $this->config->setOrganization('some-organization');
-        $this->config->setProject('some-project');
-
-        $this->transifex = new Transifex(
-            $this->client,
-            $this->requestFactory,
-            $this->streamFactory,
-            $this->uriFactory,
-            $this->config
-        );
-    }
+    private ?Client $client = null;
 
     public function testGetLanguageDetailsSuccessfulResponse(): void
     {
@@ -48,70 +28,44 @@ final class LanguagesTest extends TestCase
         $expectedBody = <<<EOT
 {
   "data": {
-    "id": "l:en_US",
-    "type": "languages",
+    "id": "l:$language",
     "attributes": {
-      "code": "en_US",
-      "name": "English (United States)",
-      "rtl": false,
-      "plural_equation": "(n != 1)",
-      "plural_rules": {
-        "one": "n is 1",
-        "other": "everything else"
+      "code": "$language",
+      "name": "English (United States)"
       }
-    },
-    "links": {
-      "self": "https://rest.api.transifex.com/languages/l:en_US"
     }
   }
 }
 EOT;
-        $this->prepareSuccessTest(200, [], $expectedBody);
-        $this->transifex->getConnector(Languages::class)->getLanguageDetails($language);
-        $this->assertCorrectRequestAndResponse('/languages/'.urlencode("l:{$language}"));
-    }
+        $mockHandler = new MockHandler();
+        $mockHandler->append(
+            MockResponse::fromString($expectedBody)
+                ->assertRequestMethod(Request::METHOD_GET)
+                ->assertRequestUri("https://rest.api.transifex.com/languages/l%3A$language")
+                ->assertRequestHeaders(
+                    [
+                        'User-Agent'    => ['GuzzleHttp/7'],
+                        'Host'          => ['rest.api.transifex.com'],
+                        'accept'        => ['application/vnd.api+json'],
+                        'content-type'  => ['application/vnd.api+json'],
+                        'authorization' => ['Bearer some-api-token'],
+                    ]
+                )
+        );
+        $handlerStack = HandlerStack::create($mockHandler);
 
-    private function prepareSuccessTest(
-        int $status = 200,
-        array $headers = [],
-        $body = null
-    ): void {
-        $this->client->setResponse(new Response($status, $headers, $body ?? $this->sampleString));
-    }
+        $this->client   = new Client(['handler' => $handlerStack]);
+        $requestFactory = new RequestFactory();
+        $streamFactory  = new StreamFactory();
+        $uriFactory     = new UriFactory();
 
-    private function assertCorrectRequestAndResponse(
-        string $path,
-        string $method = 'GET',
-        int $code = 200,
-        string $body = ''
-    ): void {
-        self::assertCorrectRequestMethod($method, $this->client->getRequest()->getMethod());
-        self::assertCorrectRequestPath($path, $this->client->getRequest()->getUri()->getPath());
-        self::assertCorrectResponseCode($code, $this->client->getResponse()->getStatusCode());
-        Assert::assertSame($body, $this->client->getRequest()->getBody()->__toString());
-    }
+        $config = new Config();
+        $config->setApiToken('some-api-token');
+        $config->setOrganization('some-organization');
+        $config->setProject('some-project');
 
-    private static function assertCorrectRequestMethod(
-        string $expected,
-        string $actual,
-        string $message = 'The API did not use the right HTTP method.'
-    ): void {
-        Assert::assertSame($expected, $actual, $message);
-    }
-
-    private static function assertCorrectRequestPath(
-        string $expected,
-        string $actual,
-        string $message = 'The API did not request the right endpoint.'
-    ): void {
-        Assert::assertSame($expected, $actual, $message);
-    }
-
-    private static function assertCorrectResponseCode(
-        int $expected,
-        int $actual,
-        string $message = 'The API did not return the right HTTP code.'
-    ): void {
-        Assert::assertSame($expected, $actual, $message);
+        $transifex = new Transifex($this->client, $requestFactory, $streamFactory, $uriFactory, $config);
+        $response  = $transifex->getConnector(Languages::class)->getLanguageDetails($language);
+        Assert::assertSame($response->getBody()->getContents(), $expectedBody);
     }
 }
