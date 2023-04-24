@@ -14,10 +14,11 @@
     <server name="SYMFONY_PHPUNIT_VERSION" value="10.1"/>
   </php>
   <testsuites>
-    <testsuite name="Project Test Suite">
+    <testsuite name="Unit">
       <directory>tests</directory>
+      <exclude>tests/Functional</exclude>
     </testsuite>
-    <testsuite name="Project Functional Test Suite">
+    <testsuite name="Functional">
       <directory>tests/Functional</directory>
     </testsuite>
   </testsuites>

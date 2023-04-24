@@ -3,30 +3,13 @@ parameters:
   mlp.translations.dir: '%kernel.project_dir%/tests/Common/translations'
 
 services:
-  transifex.test.client:
-    class: App\Tests\Common\Client\TransifexTestClient
-    public: true
+  http.client.mock_handler:
+    class: GuzzleHttp\Handler\MockHandler
 
-  request.factory:
-    class: Http\Factory\Guzzle\RequestFactory
+  http.client:
+    class: GuzzleHttp\Client
+    factory: [ 'App\Tests\Common\Client\ClientFactory', 'create' ]
+    arguments:
+      $handler: '@http.client.mock_handler'
 
-  stream.factory:
-    class: Http\Factory\Guzzle\StreamFactory
-
-  uri.factory:
-    class: Http\Factory\Guzzle\UriFactory
-
-  mautic.transifex.config:
-    class: Mautic\Transifex\Config
-    calls:
-      - [ 'setApiToken', [ '%env(TRANSIFEX_API_TOKEN)%' ] ]
-      - [ 'setOrganization', [ '%env(TRANSIFEX_ORGANISATION)%' ] ]
-      - [ 'setProject', [ '%env(TRANSIFEX_PROJECT)%' ] ]
-
-  mautic.transifex.api.connector:
-    class: Mautic\Transifex\ApiConnector
-    arguments: [ '@transifex.test.client', '@request.factory', '@stream.factory', '@uri.factory', '@mautic.transifex.config' ]
-
-  mautic.transifex:
-    class: Mautic\Transifex\Transifex
-    arguments: [ '@transifex.test.client', '@request.factory', '@stream.factory', '@uri.factory', '@mautic.transifex.config' ]
+  Psr\Http\Client\ClientInterface: '@http.client'
