@@ -9,17 +9,12 @@ return (new PhpCsFixer\Config())->setRules(
         '@Symfony'               => true,
         'binary_operator_spaces' => [
             'operators' => [
-                '=>' => 'align',
-                '='  => 'align',
+                '=>' => 'align_single_space_minimal',
+                '='  => 'align_single_space_minimal',
             ],
         ],
-        'phpdoc_to_comment'      => false,
-        'ordered_imports'        => true,
-        'array_syntax'           => [
-            'syntax' => 'short',
-        ],
-        'no_unused_imports'      => true,
-        'header_comment'         => [
+        'phpdoc_to_comment' => false,
+        'header_comment'    => [
             'header' => '',
         ],
     ]
