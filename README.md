@@ -27,5 +27,14 @@ To upload packages, you must pass the `--upload-package` option when executing t
 
 ### Testing
 
-`composer test`
+To run tests `composer test`
 
+To run unit tests `composer test -- --testsuite=Unit`
+
+To run functional tests `composer test -- --testsuite=Functional`
+
+### Static analysis tools
+
+To run fixes by friendsofphp/php-cs-fixer `composer fixcs`
+
+To run phpstan `composer phpstan`
