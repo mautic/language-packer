@@ -3,7 +3,7 @@ includes:
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
 
 parameters:
-	level: 9
+	level: 6
 	reportUnmatchedIgnoredErrors: false
 	checkGenericClassInNonGenericObjectType: false
 	parallel:
@@ -11,3 +11,4 @@ parameters:
 		processTimeout: 1000.0
 	paths:
 		- src/
+		- tests/
