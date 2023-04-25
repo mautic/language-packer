@@ -6,7 +6,6 @@ namespace App\Service;
 
 use App\Service\Transifex\DTO\UploadPackageDTO;
 use Aws\S3\S3Client;
-use GuzzleHttp\Exception\ConnectException;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Finder\Finder;
 
@@ -18,9 +17,11 @@ class UploadPackageService
 
     public function uploadPackage(UploadPackageDTO $uploadPackageDTO, ConsoleLogger $logger): int
     {
-        $packagesTimestampDirFinder = (new Finder())->sortByName()->depth(0)->files()->in(
-            $uploadPackageDTO->packagesTimestampDir
-        );
+        $packagesTimestampDirFinder = (new Finder())
+            ->sortByName()
+            ->depth(0)
+            ->files()
+            ->in($uploadPackageDTO->packagesTimestampDir);
 
         $error = 0;
 
@@ -28,8 +29,8 @@ class UploadPackageService
             $fileName = $file->getFilename();
             $key      = 'languages/'.$fileName;
 
-            // Remove our existing objects and upload fresh items
             try {
+                // Remove our existing objects and upload fresh items
                 $this->client->deleteMatchingObjects($uploadPackageDTO->s3Bucket, $key);
             } catch (\Exception $exception) {
                 $logger->error(
@@ -59,7 +60,7 @@ class UploadPackageService
                         $result->get('ObjectURL')
                     )
                 );
-            } catch (ConnectException $exception) {
+            } catch (\Exception $exception) {
                 $logger->error(
                     sprintf(
                         'Encountered error during "%1$s" upload. Error: %2$s',
