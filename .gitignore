@@ -10,9 +10,11 @@
 
 # Temp storage for downloaded resources #
 /translations
+/tests/Common/translations
 
 # Storage for completed packages #
 /packages
+/tests/Common/packages
 
 /bin/*
 !/bin/console
