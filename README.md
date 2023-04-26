@@ -17,13 +17,13 @@ The `packages` and `translations` directories are gitignored since these are dir
 
 The simplest manner to build packages is to execute `bin/console mautic:language:packer` from your command line interface.
 
-You may filter some unwanted languages by passing the `--filter-languages` argument, e.g. `bin/console mautic:language:packer --filter-languages es hi en`.
+You may filter some unwanted languages by passing the `--skip-languages` or `-s` option, e.g. `bin/console mautic:language:packer -s es -s en`.
 
-A single language may be processed by passing the `--language` option, e.g. `bin/console mautic:language:packer --language es`.
+You may process only some languages by passing the `--languages` or `-l` option, e.g. `bin/console mautic:language:packer -l af -l hi`.
 
-If some file fails sanity validation (checks to make sure ini file is valid) it's entire language will be pulled from processing to make sure we do not overwrite older bundles with incomplete translations.
+If some file fails sanity validation (checks to make sure ini file is valid) its entire language will be pulled from processing to make sure we do not overwrite older bundles with incomplete translations.
 
-To upload packages, you must pass the `--upload-package` option when executing the script, e.g. `bin/console mautic:language:packer --upload-package`.  The `amazon` settings must be configured prior to this in .env. The Amazon Web Services account must have permissions to create, edit, and delete objects (and their associated ACL settings) on your S3 instance.
+To upload packages to AWS S3, you must pass the `--upload-package` or `-u` option when executing the script, e.g. `bin/console mautic:language:packer -u`.  The `amazon` settings must be configured prior to this in .env. The Amazon Web Services account must have permissions to create, edit, and delete objects (and their associated ACL settings) on your S3 instance.
 
 ### Testing
 
