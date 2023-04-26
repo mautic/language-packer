@@ -45,14 +45,16 @@ class UploadPackageService
             }
 
             try {
+                $stream = fopen($uploadPackageDTO->packagesTimestampDir.'/'.$fileName, 'rb');
                 $result = $this->client->putObject(
                     [
-                        'Bucket'     => $_ENV['AWS_S3_BUCKET'],
-                        'Key'        => $key,
-                        'SourceFile' => $uploadPackageDTO->packagesTimestampDir.'/'.$fileName,
-                        'ACL'        => 'public-read',
+                        'Bucket' => $_ENV['AWS_S3_BUCKET'],
+                        'Key'    => $key,
+                        'Body'   => $stream,
+                        'ACL'    => 'public-read',
                     ]
                 );
+                fclose($stream);
                 $logger->info(
                     sprintf(
                         'Uploaded %1$s to AWS S3, URL: %2$s.',
@@ -61,6 +63,7 @@ class UploadPackageService
                     )
                 );
             } catch (\Exception $exception) {
+                fclose($stream);
                 $logger->error(
                     sprintf(
                         'Encountered error during "%1$s" upload. Error: %2$s',
