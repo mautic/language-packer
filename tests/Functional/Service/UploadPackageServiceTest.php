@@ -11,16 +11,44 @@ use Aws\S3\S3Client;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Finder\Finder;
 
 class UploadPackageServiceTest extends KernelTestCase
 {
+    private string $packagesTimestampDir;
+
+    private string $s3Bucket;
+
+    private array $packageLanguages = ['af', 'ar', 'cs'];
+
+    protected function setUp(): void
+    {
+        $container    = self::getContainer();
+        $parameterBag = $container->get('parameter_bag');
+        $packagesDir  = $parameterBag->get('mlp.packages.dir');
+
+        $finder = new Finder();
+        $finder->directories()
+            ->in($packagesDir)
+            ->depth(0);
+
+        if (1 !== $finder->count()) {
+            $this->fail('Test package directory should not have more than 1 package to test.');
+        }
+
+        foreach ($finder as $directory) {
+            $this->packagesTimestampDir = $directory->getPathname();
+        }
+
+        if (!$this->packagesTimestampDir) {
+            $this->fail('Test package directory cannot be empty.');
+        }
+
+        $this->s3Bucket = $_ENV['AWS_S3_BUCKET'];
+    }
+
     public function testUploadPackage(): void
     {
-        $container            = self::getContainer();
-        $parameterBag         = $container->get('parameter_bag');
-        $packagesTimestampDir = $parameterBag->get('mlp.packages.dir').'/20230419055736';
-        $s3Bucket             = 's3bucket';
-
         $s3ClientMock = $this->getMockBuilder(S3Client::class)
             ->disableOriginalConstructor()
             ->addMethods(['putObject'])
@@ -28,51 +56,57 @@ class UploadPackageServiceTest extends KernelTestCase
             ->getMock();
         $resultMock = $this->createMock(Result::class);
 
-        $s3ClientMock->expects(self::exactly(2))
-            ->method('deleteMatchingObjects')
-            ->willReturnMap([
-                [Assert::equalTo($s3Bucket), Assert::equalTo('languages/af.json')],
-                [Assert::equalTo($s3Bucket), Assert::equalTo('languages/af.zip')],
-            ]);
+        foreach ($this->packageLanguages as $language) {
+            $deleteMatchingObjectsMap[] = [
+                Assert::equalTo($this->s3Bucket),
+                Assert::equalTo("languages/$language.json"),
+            ];
+            $deleteMatchingObjectsMap[] = [
+                Assert::equalTo($this->s3Bucket),
+                Assert::equalTo("languages/$language.zip"),
+            ];
+            $putObjectMap[] = [
+                Assert::equalTo([
+                    'Bucket'     => $this->s3Bucket,
+                    'Key'        => "languages/$language.json",
+                    'SourceFile' => $this->packagesTimestampDir."/$language.json",
+                    'ACL'        => 'public-read',
+                ]),
+            ];
+            $putObjectMap[] = [
+                Assert::equalTo([
+                    'Bucket'     => $this->s3Bucket,
+                    'Key'        => "languages/$language.zip",
+                    'SourceFile' => $this->packagesTimestampDir."/$language.zip",
+                    'ACL'        => 'public-read',
+                ]),
+            ];
+            $objectURLMap[] = ["https://some-s3-url/$language.json/"];
+            $objectURLMap[] = ["https://some-s3-url/$language.zip/"];
+        }
 
-        $resultMock->expects(self::exactly(2))
+        $s3ClientMock->expects(self::exactly(6))
+            ->method('deleteMatchingObjects')
+            ->willReturnMap($deleteMatchingObjectsMap);
+
+        $resultMock->expects(self::exactly(6))
             ->method('get')
             ->with('ObjectURL')
-            ->willReturnMap([
-                ['https://some-s3-url/af.json/'],
-                ['https://some-s3-url/af.zip/'],
-            ]);
+            ->willReturnMap($objectURLMap);
 
-        $s3ClientMock->expects(self::exactly(2))
+        $s3ClientMock->expects(self::exactly(6))
             ->method('putObject')
-            ->willReturnMap([
-                [Assert::equalTo([
-                    'Bucket'     => $s3Bucket,
-                    'Key'        => 'languages/af.json',
-                    'SourceFile' => $packagesTimestampDir.'/af.json',
-                    'ACL'        => 'public-read',
-                ])],
-                [Assert::equalTo([
-                    'Bucket'     => $s3Bucket,
-                    'Key'        => 'languages/af.zip',
-                    'SourceFile' => $packagesTimestampDir.'/af.zip',
-                    'ACL'        => 'public-read',
-                ])],
-            ])
+            ->willReturnMap($putObjectMap)
             ->willReturn($resultMock);
+
         $uploadPackageService = new UploadPackageService($s3ClientMock);
         $loggerMock           = $this->createMock(ConsoleLogger::class);
-        $uploadPackageDTO     = new UploadPackageDTO($packagesTimestampDir, $s3Bucket);
+        $uploadPackageDTO     = new UploadPackageDTO($this->packagesTimestampDir);
         $uploadPackageService->uploadPackage($uploadPackageDTO, $loggerMock);
     }
 
     public function testDeleteMatchingObjectsThrowsError(): void
     {
-        $container            = self::getContainer();
-        $parameterBag         = $container->get('parameter_bag');
-        $packagesTimestampDir = $parameterBag->get('mlp.packages.dir').'/20230419055736';
-        $s3Bucket             = 's3bucket';
-
         $s3ClientMock = $this->getMockBuilder(S3Client::class)
             ->disableOriginalConstructor()
             ->addMethods(['putObject'])
@@ -80,7 +114,7 @@ class UploadPackageServiceTest extends KernelTestCase
             ->getMock();
         $resultMock = $this->createMock(Result::class);
 
-        $s3ClientMock->expects(self::exactly(2))
+        $s3ClientMock->expects(self::exactly(6))
             ->method('deleteMatchingObjects')
             ->willThrowException(new \Exception('Error in deleting matching objects.'));
 
@@ -90,45 +124,49 @@ class UploadPackageServiceTest extends KernelTestCase
 
         $s3ClientMock->expects(self::never())
             ->method('putObject');
+
         $uploadPackageService = new UploadPackageService($s3ClientMock);
         $loggerMock           = $this->createMock(ConsoleLogger::class);
-        $uploadPackageDTO     = new UploadPackageDTO($packagesTimestampDir, $s3Bucket);
+        $uploadPackageDTO     = new UploadPackageDTO($this->packagesTimestampDir);
         $error                = $uploadPackageService->uploadPackage($uploadPackageDTO, $loggerMock);
         Assert::assertSame(1, $error);
     }
 
     public function testPutObjectThrowsError(): void
     {
-        $container            = self::getContainer();
-        $parameterBag         = $container->get('parameter_bag');
-        $packagesTimestampDir = $parameterBag->get('mlp.packages.dir').'/20230419055736';
-        $s3Bucket             = 's3bucket';
-
         $s3ClientMock = $this->getMockBuilder(S3Client::class)
             ->disableOriginalConstructor()
             ->addMethods(['putObject'])
             ->onlyMethods(['deleteMatchingObjects'])
             ->getMock();
-        $resultMock = $this->createMock(Result::class);
 
-        $s3ClientMock->expects(self::exactly(2))
+        foreach ($this->packageLanguages as $language) {
+            $deleteMatchingObjectsMap[] = [
+                Assert::equalTo($this->s3Bucket),
+                Assert::equalTo("languages/$language.json"),
+            ];
+            $deleteMatchingObjectsMap[] = [
+                Assert::equalTo($this->s3Bucket),
+                Assert::equalTo("languages/$language.zip"),
+            ];
+        }
+
+        $s3ClientMock->expects(self::exactly(6))
             ->method('deleteMatchingObjects')
-            ->willReturnMap([
-                [Assert::equalTo($s3Bucket), Assert::equalTo('languages/af.json')],
-                [Assert::equalTo($s3Bucket), Assert::equalTo('languages/af.zip')],
-            ]);
+            ->willReturnMap($deleteMatchingObjectsMap);
 
+        $s3ClientMock->expects(self::exactly(6))
+            ->method('putObject')
+            ->willThrowException(new \Exception('Error in putObject().'));
+
+        $resultMock = $this->createMock(Result::class);
         $resultMock->expects(self::never())
             ->method('get')
             ->with('ObjectURL');
 
-        $s3ClientMock->expects(self::exactly(2))
-            ->method('putObject')
-            ->willThrowException(new \Exception('Error in putObject().'));
-
         $uploadPackageService = new UploadPackageService($s3ClientMock);
         $loggerMock           = $this->createMock(ConsoleLogger::class);
-        $uploadPackageDTO     = new UploadPackageDTO($packagesTimestampDir, $s3Bucket);
+        $uploadPackageDTO     = new UploadPackageDTO($this->packagesTimestampDir);
         $error                = $uploadPackageService->uploadPackage($uploadPackageDTO, $loggerMock);
         Assert::assertSame(1, $error);
     }
