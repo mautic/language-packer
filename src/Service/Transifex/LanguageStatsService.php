@@ -22,7 +22,9 @@ class LanguageStatsService
     public function getStatistics(ResourceDTO $resourceDTO, ConsoleLogger $logger): void
     {
         // Split the name to create our file name
-        [$bundle, $file] = explode(' ', $resourceDTO->resourceName);
+        $resourceNameParts = explode(' ', $resourceDTO->resourceName);
+        $bundle            = $resourceNameParts[0] ?? '';
+        $file              = $resourceNameParts[1] ?? '';
 
         if (!$bundle || !$file) {
             return;
@@ -39,6 +41,9 @@ class LanguageStatsService
         }
     }
 
+    /**
+     * @return array<string, string|array<string, string|int|null>>
+     */
     private function getLanguageStats(ResourceDTO $resourceDTO, ConsoleLogger $logger, string $language = ''): array
     {
         $data = [];
@@ -65,6 +70,9 @@ class LanguageStatsService
         return $data;
     }
 
+    /**
+     * @param array<string, string|array<string, string|int|null>> $languageStats
+     */
     private function processLanguageStats(
         ResourceDTO $resourceDTO,
         ConsoleLogger $logger,
@@ -94,7 +102,7 @@ class LanguageStatsService
                 $language,
                 $bundle,
                 $file,
-                $languageStat['attributes']['last_update']
+                $languageStat['attributes']['last_update'] ?? ''
             );
             $this->translationsService->getTranslations($translationDTO, $logger);
         }

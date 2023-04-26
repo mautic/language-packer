@@ -12,8 +12,10 @@ use App\Tests\Common\Client\MockResponse;
 use App\Tests\Common\Trait\ResponseBodyBuilderTrait;
 use Aws\MockHandler as AwsMockHandler;
 use Aws\Result;
+use Aws\ResultInterface;
 use GuzzleHttp\Handler\MockHandler;
 use PHPUnit\Framework\Assert;
+use Psr\Http\Message\ResponseInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -64,6 +66,10 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
 
     /**
      * @dataProvider provideExecutionData
+     *
+     * @param ResponseInterface[]                   $mockResponses
+     * @param array<string, string[]>               $commandArguments
+     * @param ResultInterface[]|\RuntimeException[] $awsMockResponses
      */
     public function testExecute(
         string $expectedOutput,
@@ -83,6 +89,9 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         Assert::assertStringContainsString($expectedOutput, $this->getFixedCommandOutput());
     }
 
+    /**
+     * @return array<mixed>
+     */
     public static function provideExecutionData(): iterable
     {
         $container       = self::getContainer();
@@ -554,6 +563,9 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         ];
     }
 
+    /**
+     * @return array<string, array<string>>
+     */
     private static function getCommonHeaders(): array
     {
         return [
@@ -565,6 +577,10 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         ];
     }
 
+    /**
+     * @param array<string, array<string>> $headers
+     * @param array<string, array<string>> $responseHeaders
+     */
     private static function getMockResponse(
         string $body,
         string $method,

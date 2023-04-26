@@ -12,12 +12,21 @@
     <server name="SHELL_VERBOSITY" value="-1"/>
     <server name="SYMFONY_PHPUNIT_REMOVE" value=""/>
     <server name="SYMFONY_PHPUNIT_VERSION" value="10.1"/>
+
     <env name="KERNEL_CLASS" value="App\Kernel"/>
+
     <env name="TRANSIFEX_API_TOKEN" value="not-a-real-api-token"/>
     <env name="TRANSIFEX_ORGANISATION" value="not-a-real-organisation"/>
     <env name="TRANSIFEX_PROJECT" value="not-a-real-project"/>
-    <env name="AWS_S3_BUCKET" value="not-a-real-bucket"/>
     <env name="TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS" value="1"/>
+
+    <env name="AWS_KEY" value="not-a-real-key"/>
+    <env name="AWS_SECRET" value="not-a-real-secret"/>
+    <env name="AWS_VERSION" value="latest"/>
+    <env name="AWS_REGION" value="us-west-2"/>
+    <env name="AWS_S3_BUCKET" value="not-a-real-bucket"/>
+    <env name="AWS_S3_REGION" value="us-west-2"/>
+    <env name="AWS_S3_VERSION" value="2006-03-01"/>
   </php>
   <testsuites>
     <testsuite name="Unit">
