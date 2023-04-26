@@ -16,6 +16,8 @@
     <env name="TRANSIFEX_API_TOKEN" value="not-a-real-api-token"/>
     <env name="TRANSIFEX_ORGANISATION" value="not-a-real-organisation"/>
     <env name="TRANSIFEX_PROJECT" value="not-a-real-project"/>
+    <env name="AWS_S3_BUCKET" value="not-a-real-bucket"/>
+    <env name="TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS" value="1"/>
   </php>
   <testsuites>
     <testsuite name="Unit">
