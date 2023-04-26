@@ -7,11 +7,11 @@ namespace App\Service\Transifex\DTO;
 class PackageDTO
 {
     /**
-     * @param array<string> $filterLanguages
+     * @param array<string> $skipLanguages
      */
     public function __construct(
         public readonly string $translationsDir,
-        public readonly array $filterLanguages,
+        public readonly array $skipLanguages,
         public readonly string $packagesTimestampDir
     ) {
     }

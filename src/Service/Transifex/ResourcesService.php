@@ -23,7 +23,7 @@ class ResourcesService
         try {
             $resources    = $this->transifex->getConnector(Resources::class);
             $response     = $resources->getAll();
-            $body         = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+            $body         = json_decode($response->getBody()->__toString(), true);
             $resourceData = $body['data'] ?? [];
         } catch (ResponseException $exception) {
             $logger->error(
@@ -49,6 +49,7 @@ class ResourcesService
             $resourceDTO->resourceSlug = $slug;
             $resourceDTO->resourceName = $name;
             $this->languageStatsService->getStatistics($resourceDTO, $logger);
+            break;
         }
 
         return 0;

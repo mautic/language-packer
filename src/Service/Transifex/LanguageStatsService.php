@@ -28,33 +28,57 @@ class LanguageStatsService
             return;
         }
 
+        if (count($resourceDTO->languages)) {
+            foreach ($resourceDTO->languages as $language) {
+                $languageStats = $this->getLanguageStats($resourceDTO, $logger, $language);
+                $this->processLanguageStats($resourceDTO, $logger, $languageStats, $bundle, $file);
+            }
+        } else {
+            $languageStats = $this->getLanguageStats($resourceDTO, $logger);
+            $this->processLanguageStats($resourceDTO, $logger, $languageStats, $bundle, $file);
+        }
+    }
+
+    private function getLanguageStats(ResourceDTO $resourceDTO, ConsoleLogger $logger, string $language = ''): array
+    {
+        $data = [];
+
         try {
             $languageStats = $this->transifex->getConnector(Statistics::class);
-            $response      = $languageStats->getLanguageStats($resourceDTO->resourceSlug, $resourceDTO->language);
-            $statistics    = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
-            $languageStats = $statistics['data'] ?? [];
+            $response      = $languageStats->getLanguageStats($resourceDTO->resourceSlug, $language);
+            $statistics    = json_decode($response->getBody()->__toString(), true);
+            $data          = $statistics['data'] ?? [];
         } catch (ResponseException $exception) {
-            $logger->error(
-                sprintf(
-                    'Encountered error during fetching statistics for "%1$s" resource of "%2$s" language. Error: %3$s',
-                    $resourceDTO->resourceSlug,
-                    $resourceDTO->language,
-                    $exception->getMessage()
-                )
+            $message = sprintf(
+                'Encountered error during fetching statistics for "%1$s" resource',
+                $resourceDTO->resourceSlug
             );
 
-            return;
+            if ($language) {
+                $message .= sprintf(' of "%1$s" language.', $language);
+            }
+
+            $message .= ' Error: '.$exception->getMessage();
+            $logger->error($message);
         }
 
-        foreach ($languageStats as $languageStat) {
-            $id         = $languageStat['id'];
-            $idParts    = explode(':', $id);
-            $language   = end($idParts);
-            $attributes = $languageStat['attributes'];
-            $lastUpdate = $attributes['last_update'];
+        return $data;
+    }
 
-            // Skip filtered languages
-            if (in_array($language, $resourceDTO->filterLanguages, true)) {
+    private function processLanguageStats(
+        ResourceDTO $resourceDTO,
+        ConsoleLogger $logger,
+        array $languageStats,
+        string $bundle,
+        string $file
+    ): void {
+        $cnt = 0;
+
+        foreach ($languageStats as $languageStat) {
+            $idParts  = explode(':', $languageStat['id']);
+            $language = end($idParts);
+
+            if (in_array($language, $resourceDTO->skipLanguages, true)) {
                 continue;
             }
 
@@ -72,9 +96,15 @@ class LanguageStatsService
                 $language,
                 $bundle,
                 $file,
-                $lastUpdate
+                $languageStat['attributes']['last_update']
             );
             $this->translationsService->getTranslations($translationDTO, $logger);
+
+            if (5 === $cnt) {
+                break;
+            }
+
+            ++$cnt;
         }
     }
 }

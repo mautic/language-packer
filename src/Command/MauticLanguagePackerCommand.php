@@ -13,7 +13,6 @@ use App\Service\UploadPackageService;
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Logger\ConsoleLogger;
@@ -39,20 +38,23 @@ class MauticLanguagePackerCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument(
-            'filter-languages',
-            InputArgument::OPTIONAL | InputArgument::IS_ARRAY,
-            'Languages that you want to skip (separate multiple languages with a space)'
-        )->addOption(
-            'language',
-            null,
-            InputOption::VALUE_REQUIRED,
-            'Do you want to process a single language? Add e.g. `--language es` as argument.'
-        )->addOption(
+        $this->addOption(
+            'skip-languages',
+            's',
+            InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+            'Skip languages. For e.g. bin/console '.self::NAME.' -s es -s en.'
+        );
+        $this->addOption(
+            'languages',
+            'l',
+            InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+            'Process languages. For e.g. bin/console '.self::NAME.' -l es -l en.'
+        );
+        $this->addOption(
             'upload-package',
-            null,
+            'u',
             InputOption::VALUE_NONE,
-            'Do you want to upload the package to AWS S3? Add --upload-package as argument.'
+            'Upload the package to AWS S3. For e.g. bin/console '.self::NAME.' -u.'
         );
     }
 
@@ -64,16 +66,16 @@ class MauticLanguagePackerCommand extends Command
         $packagesDir     = $this->parameterBag->get('mlp.packages.dir');
         $translationsDir = $this->parameterBag->get('mlp.translations.dir');
 
-        $filterLanguages = $input->getArgument('filter-languages');
-        $language        = $input->getOption('language') ?? '';
-        $uploadPackage   = $input->getOption('upload-package');
+        $skipLanguages = $input->getOption('skip-languages');
+        $languages     = $input->getOption('languages');
+        $uploadPackage = $input->getOption('upload-package');
 
         // Remove any previous pulls and rebuild the translations folder
         $this->filesystem->remove($translationsDir);
         $this->filesystem->mkdir($translationsDir);
 
         // Fetch the project resources now and store them locally
-        $resourceDTO   = new ResourceDTO($translationsDir, $filterLanguages, $language);
+        $resourceDTO   = new ResourceDTO($translationsDir, $skipLanguages, $languages);
         $resourceError = $this->resourcesService->processAllResources($resourceDTO, $logger);
 
         if ($resourceError) {
@@ -91,7 +93,7 @@ class MauticLanguagePackerCommand extends Command
         $this->filesystem->mkdir($packagesTimestampDir);
 
         // Compile our data to forward to mautic.org and build the ZIP packages
-        $packageDTO = new PackageDTO($translationsDir, $filterLanguages, $packagesTimestampDir);
+        $packageDTO = new PackageDTO($translationsDir, $skipLanguages, $packagesTimestampDir);
         $buildError = $this->buildPackageService->build($packageDTO, $logger);
 
         if ($buildError) {
@@ -103,7 +105,7 @@ class MauticLanguagePackerCommand extends Command
         // If instructed, upload the packages
         if ($uploadPackage) {
             $io->info('Starting package upload to AWS S3.');
-            $uploadPackageDTO = new UploadPackageDTO($packagesTimestampDir, $_ENV['AWS_S3_BUCKET']);
+            $uploadPackageDTO = new UploadPackageDTO($packagesTimestampDir);
             $uploadError      = $this->uploadPackageService->uploadPackage($uploadPackageDTO, $logger);
 
             if ($uploadError) {
@@ -118,11 +120,11 @@ class MauticLanguagePackerCommand extends Command
 
     private function getConsoleLogger(OutputInterface $output): ConsoleLogger
     {
-        $formatLevelMap = [
-            LogLevel::CRITICAL => ConsoleLogger::ERROR,
-            LogLevel::DEBUG    => ConsoleLogger::INFO,
+        $verbosityLevelMap = [
+            LogLevel::ERROR => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::INFO  => OutputInterface::VERBOSITY_NORMAL,
         ];
 
-        return new ConsoleLogger($output, [], $formatLevelMap);
+        return new ConsoleLogger($output, $verbosityLevelMap);
     }
 }

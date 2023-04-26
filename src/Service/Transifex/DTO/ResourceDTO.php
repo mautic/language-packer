@@ -7,12 +7,13 @@ namespace App\Service\Transifex\DTO;
 class ResourceDTO
 {
     /**
-     * @param array<string> $filterLanguages
+     * @param array<string> $skipLanguages
+     * @param array<string> $languages
      */
     public function __construct(
         public readonly string $translationsDir,
-        public readonly array $filterLanguages,
-        public readonly string $language,
+        public readonly array $skipLanguages,
+        public readonly array $languages,
         public string $resourceSlug = '',
         public string $resourceName = ''
     ) {

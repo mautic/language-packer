@@ -20,9 +20,10 @@ class BuildPackageService
 
     public function build(PackageDTO $packageDTO, ConsoleLogger $logger): int
     {
-        $translationsDirFinder = (new Finder())->sortByName()->depth(0)->directories()->in(
-            $packageDTO->translationsDir
-        );
+        $translationsDirFinder = (new Finder())->sortByName()
+            ->depth(0)
+            ->directories()
+            ->in($packageDTO->translationsDir);
 
         $languageData = [];
 
@@ -32,7 +33,7 @@ class BuildPackageService
             $languageCode = $folder->getBasename();
             $languageDir  = $packageDTO->translationsDir.'/'.$languageCode;
 
-            if (in_array($languageCode, $packageDTO->filterLanguages, true)) {
+            if (in_array($languageCode, $packageDTO->skipLanguages, true)) {
                 continue;
             }
 
@@ -44,7 +45,7 @@ class BuildPackageService
             try {
                 $languageDetails    = $this->transifex->getConnector(Languages::class);
                 $response           = $languageDetails->getLanguageDetails($languageCode);
-                $statistics         = json_decode($response->getBody()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+                $statistics         = json_decode($response->getBody()->__toString(), true);
                 $languageAttributes = $statistics['data']['attributes'] ?? [];
             } catch (ResponseException $exception) {
                 $logger->error(

@@ -31,7 +31,7 @@ class UploadPackageService
 
             try {
                 // Remove our existing objects and upload fresh items
-                $this->client->deleteMatchingObjects($uploadPackageDTO->s3Bucket, $key);
+                $this->client->deleteMatchingObjects($_ENV['AWS_S3_BUCKET'], $key);
             } catch (\Exception $exception) {
                 $logger->error(
                     sprintf(
@@ -47,7 +47,7 @@ class UploadPackageService
             try {
                 $result = $this->client->putObject(
                     [
-                        'Bucket'     => $uploadPackageDTO->s3Bucket,
+                        'Bucket'     => $_ENV['AWS_S3_BUCKET'],
                         'Key'        => $key,
                         'SourceFile' => $uploadPackageDTO->packagesTimestampDir.'/'.$fileName,
                         'ACL'        => 'public-read',

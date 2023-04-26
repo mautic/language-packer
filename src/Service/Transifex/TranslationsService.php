@@ -32,7 +32,7 @@ class TranslationsService
         $this->filesystem->touch($bundlePath, strtotime($translationDTO->lastUpdate));
         $this->filesystem->touch($filePath, strtotime($translationDTO->lastUpdate));
 
-        $maxAttempts = 3;
+        $maxAttempts = (int) $_ENV['TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS'];
 
         for ($attempt = 1; $attempt <= $maxAttempts; ++$attempt) {
             try {
@@ -46,6 +46,7 @@ class TranslationsService
             } catch (ResponseException $exception) {
                 if ($attempt === $maxAttempts) {
                     $this->outputErrors($logger, $filePath, $exception->getMessage());
+                    break;
                 }
 
                 sleep(2 ** $attempt);
@@ -91,6 +92,7 @@ class TranslationsService
                         $exception->getMessage()
                     )
                 );
+                throw $exception;
             }
         );
     }
