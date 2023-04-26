@@ -6,6 +6,7 @@ namespace App\Tests\Transifex\Connector;
 
 use App\Service\Transifex\Connector\Languages;
 use App\Tests\Common\Client\MockResponse;
+use App\Tests\Common\Trait\ResponseBodyBuilderTrait;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -20,24 +21,13 @@ use Symfony\Component\HttpFoundation\Request;
 
 final class LanguagesTest extends TestCase
 {
-    private ?Client $client = null;
+    use ResponseBodyBuilderTrait;
 
     public function testGetLanguageDetailsSuccessfulResponse(): void
     {
-        $language     = 'en_US';
-        $expectedBody = <<<EOT
-{
-  "data": {
-    "id": "l:$language",
-    "attributes": {
-      "code": "$language",
-      "name": "English (United States)"
-      }
-    }
-  }
-}
-EOT;
-        $mockHandler = new MockHandler();
+        $language     = 'af';
+        $expectedBody = self::buildLanguagesBody($language);
+        $mockHandler  = new MockHandler();
         $mockHandler->append(
             MockResponse::fromString($expectedBody)
                 ->assertRequestMethod(Request::METHOD_GET)
@@ -54,7 +44,7 @@ EOT;
         );
         $handlerStack = HandlerStack::create($mockHandler);
 
-        $this->client   = new Client(['handler' => $handlerStack]);
+        $client         = new Client(['handler' => $handlerStack]);
         $requestFactory = new RequestFactory();
         $streamFactory  = new StreamFactory();
         $uriFactory     = new UriFactory();
@@ -64,7 +54,7 @@ EOT;
         $config->setOrganization('some-organization');
         $config->setProject('some-project');
 
-        $transifex = new Transifex($this->client, $requestFactory, $streamFactory, $uriFactory, $config);
+        $transifex = new Transifex($client, $requestFactory, $streamFactory, $uriFactory, $config);
         $response  = $transifex->getConnector(Languages::class)->getLanguageDetails($language);
         Assert::assertSame($response->getBody()->getContents(), $expectedBody);
     }
