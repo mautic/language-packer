@@ -9,9 +9,9 @@ use App\Service\BuildPackageService;
 use App\Service\Transifex\ResourcesService;
 use App\Service\UploadPackageService;
 use App\Tests\Common\Client\MockResponse;
-use App\Tests\Common\Trait\PackagesTestFolderTrait;
 use App\Tests\Common\Trait\ResponseBodyBuilderTrait;
-use App\Tests\Common\Trait\TranslationsTestFolderTrait;
+use Aws\MockHandler as AwsMockHandler;
+use Aws\Result;
 use GuzzleHttp\Handler\MockHandler;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -22,8 +22,6 @@ use Symfony\Component\HttpFoundation\Request;
 
 class MauticLanguagePackerCommandTest extends KernelTestCase
 {
-    use PackagesTestFolderTrait;
-    use TranslationsTestFolderTrait;
     use ResponseBodyBuilderTrait;
 
     private CommandTester $commandTester;
@@ -35,6 +33,8 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
     private string $translationsDir;
 
     private MockHandler $mockHandler;
+
+    private AwsMockHandler $awsMockHandler;
 
     protected function setUp(): void
     {
@@ -58,19 +58,25 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         $this->packagesDir     = $parameterBag->get('mlp.packages.dir');
         $this->translationsDir = $parameterBag->get('mlp.translations.dir');
 
-        $this->mockHandler = $container->get('http.client.mock_handler');
-
-        $this->backupTestTranslationsFolder();
-        $this->backupTestPackagesFolder();
+        $this->mockHandler    = $container->get('http.client.mock_handler');
+        $this->awsMockHandler = $container->get('aws.client.mock_handler');
     }
 
     /**
      * @dataProvider provideExecutionData
      */
-    public function testExecute(string $expectedOutput, array $mockResponses, array $commandArguments = []): void
-    {
+    public function testExecute(
+        string $expectedOutput,
+        array $mockResponses,
+        array $commandArguments = [],
+        array $awsMockResponses = []
+    ): void {
         foreach ($mockResponses as $mockResponse) {
             $this->mockHandler->append($mockResponse);
+        }
+
+        foreach ($awsMockResponses as $awsMockResponse) {
+            $this->awsMockHandler->append($awsMockResponse);
         }
 
         $this->commandTester->execute($commandArguments);
@@ -420,7 +426,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             ['-s' => ['es', 'en']],
         ];
 
-        yield 'failure with upload package' => [
+        yield 'failure with upload package when deleting matching objects' => [
             'Encountered error during language packages upload to AWS S3.',
             [
                 self::getMockResponse(
@@ -455,6 +461,96 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
                 ),
             ],
             ['-u' => true],
+            [
+                new \RuntimeException('Error during deleteMatchingObjects() for af.json'),
+                new \RuntimeException('Error during deleteMatchingObjects() for af.zip'),
+            ],
+        ];
+
+        yield 'failure with upload package when calling putObject()' => [
+            'Encountered error during language packages upload to AWS S3.',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody(),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+            ['-u' => true],
+            [
+                new Result(['calling deleteMatchingObjects() for af.json']),
+                new \RuntimeException('Error during putObject() for af.json'),
+                new Result(['calling deleteMatchingObjects() for af.zip']),
+                new \RuntimeException('Error during putObject() for af.zip'),
+            ],
+        ];
+
+        yield 'success with upload package' => [
+            'Successfully uploaded language packages to AWS S3!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody(),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+            ['-u' => true],
+            [
+                new Result(['calling deleteMatchingObjects() for af.json']),
+                new Result(['calling putObject() for af.json']),
+                new Result(['calling deleteMatchingObjects() for af.zip']),
+                new Result(['calling putObject() for af.zip']),
+            ],
         ];
     }
 
@@ -490,7 +586,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        $this->restoreTestTranslationsFolder();
-        $this->restoreTestPackagesFolder();
+        $this->filesystem->remove($this->translationsDir);
+        $this->filesystem->remove($this->packagesDir);
     }
 }

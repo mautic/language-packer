@@ -13,3 +13,14 @@ services:
       $handler: '@http.client.mock_handler'
 
   Psr\Http\Client\ClientInterface: '@http.client'
+
+  aws.client.mock_handler:
+    class: Aws\MockHandler
+
+  aws.s3:
+    class: Aws\S3\S3Client
+    factory: [ 'App\Tests\Common\Client\S3ClientFactory', 'create' ]
+    arguments:
+      $handler: '@aws.client.mock_handler'
+
+  Aws\S3\S3ClientInterface: '@aws.s3'
