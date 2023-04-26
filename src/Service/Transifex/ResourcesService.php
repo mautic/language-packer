@@ -49,7 +49,6 @@ class ResourcesService
             $resourceDTO->resourceSlug = $slug;
             $resourceDTO->resourceName = $name;
             $this->languageStatsService->getStatistics($resourceDTO, $logger);
-            break;
         }
 
         return 0;

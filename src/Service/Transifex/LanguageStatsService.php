@@ -72,8 +72,6 @@ class LanguageStatsService
         string $bundle,
         string $file
     ): void {
-        $cnt = 0;
-
         foreach ($languageStats as $languageStat) {
             $idParts  = explode(':', $languageStat['id']);
             $language = end($idParts);
@@ -99,12 +97,6 @@ class LanguageStatsService
                 $languageStat['attributes']['last_update']
             );
             $this->translationsService->getTranslations($translationDTO, $logger);
-
-            if (5 === $cnt) {
-                break;
-            }
-
-            ++$cnt;
         }
     }
 }
