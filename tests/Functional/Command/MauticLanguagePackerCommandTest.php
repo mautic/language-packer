@@ -9,26 +9,32 @@ use App\Service\BuildPackageService;
 use App\Service\Transifex\ResourcesService;
 use App\Service\UploadPackageService;
 use App\Tests\Common\Client\MockResponse;
+use App\Tests\Common\Trait\PackagesTestFolderTrait;
+use App\Tests\Common\Trait\ResponseBodyBuilderTrait;
+use App\Tests\Common\Trait\TranslationsTestFolderTrait;
 use GuzzleHttp\Handler\MockHandler;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 
 class MauticLanguagePackerCommandTest extends KernelTestCase
 {
-    private ?CommandTester $commandTester = null;
+    use PackagesTestFolderTrait;
+    use TranslationsTestFolderTrait;
+    use ResponseBodyBuilderTrait;
 
-    private ?Filesystem $filesystem = null;
+    private CommandTester $commandTester;
 
-    private ?string $packagesDir = null;
+    private Filesystem $filesystem;
 
-    private ?string $translationsDir = null;
+    private string $packagesDir;
 
-    private ?MockHandler $mockHandler = null;
+    private string $translationsDir;
+
+    private MockHandler $mockHandler;
 
     protected function setUp(): void
     {
@@ -55,159 +61,404 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         $this->mockHandler = $container->get('http.client.mock_handler');
 
         $this->backupTestTranslationsFolder();
+        $this->backupTestPackagesFolder();
     }
 
-    private function backupTestTranslationsFolder(): void
+    /**
+     * @dataProvider provideExecutionData
+     */
+    public function testExecute(string $expectedOutput, array $mockResponses, array $commandArguments = []): void
     {
-        $translationsBckDir = $this->getTranslationsBackupDir();
-        $this->filesystem->remove($translationsBckDir);
-        $this->filesystem->rename($this->translationsDir, $translationsBckDir);
-        $this->filesystem->mkdir($this->translationsDir);
-    }
-
-    protected function tearDown(): void
-    {
-        $this->restoreTestTranslationsFolder();
-        $this->removeExtraPackagesFolder();
-    }
-
-    private function restoreTestTranslationsFolder(): void
-    {
-        $translationsBckDir = $this->getTranslationsBackupDir();
-        $this->filesystem->remove($this->translationsDir);
-        $this->filesystem->rename($translationsBckDir, $this->translationsDir);
-    }
-
-    private function getTranslationsBackupDir(): string
-    {
-        $pathParts = explode('/', $this->translationsDir);
-        array_pop($pathParts);
-
-        return implode('/', $pathParts).'/translations-bck';
-    }
-
-    private function removeExtraPackagesFolder(): void
-    {
-        $packagesDirFinder = (new Finder())->depth(0)->in($this->packagesDir);
-
-        foreach ($packagesDirFinder as $item) {
-            if (
-                ($item->isDir() && '20230419055736' === $item->getFilename())
-                || ($item->isFile() && '20230419055736.txt' === $item->getFilename())
-            ) {
-                continue;
-            }
-
-            $this->filesystem->remove($item->getRealPath());
+        foreach ($mockResponses as $mockResponse) {
+            $this->mockHandler->append($mockResponse);
         }
+
+        $this->commandTester->execute($commandArguments);
+        Assert::assertStringContainsString($expectedOutput, $this->getFixedCommandOutput());
     }
 
-    public function testExecute(): void
+    public static function provideExecutionData(): iterable
     {
+        $container       = self::getContainer();
+        $parameterBag    = $container->get('parameter_bag');
+        $translationsDir = $parameterBag->get('mlp.translations.dir');
+
         $organisation = $_ENV['TRANSIFEX_ORGANISATION'];
         $project      = $_ENV['TRANSIFEX_PROJECT'];
 
         $slug     = 'addonbundle-flashes';
-        $resource = 'AddonBundle flashes';
+        $bundle   = 'AddonBundle';
+        $file     = 'flashes';
+        $resource = "$bundle $file";
         $language = 'af';
 
-        $headers = $this->getCommonHeaders();
+        $uuid = 'ab267026-4109-44ef-a13f-3c369d0e8a3c';
 
-        $resourcesExpectedBody = <<<EOT
-{
-  "data": [
-    {
-      "attributes": {
-        "slug": "$slug",
-        "name": "$resource"
-      }
-    }
-  ]
-}
-EOT;
-        $resourcesUri = "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project";
+        yield 'get all resources generates response exception' => [
+            '[ERROR] Encountered error during fetching all resources.',
+            [
+                self::getMockResponse(
+                    'Encountered error during fetching all resources.',
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders(),
+                    400
+                ),
+            ],
+        ];
 
-        $statisticsExpectedBody = <<<EOT
-{
-  "data": [
-    {
-      "id": "o:mautic:p:mautic:r:$resource:l:$language",
-      "attributes": {
-        "last_update": "2015-05-21T08:06:10Z"
-      }
-    }
-  ]
-}
-EOT;
-        $statisticsUri = "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project";
+        yield 'get all resources without slug and name' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody('', ''),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
 
-        $uuid                     = 'ab267026-4109-44ef-a13f-3c369d0e8a3c';
-        $translationsExpectedBody = <<<EOT
-{
-  "data": {
-    "id": "$uuid",
-    "links": {
-      "self": "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid"
-    }
-  }
-}
-EOT;
-        $translationsUri = 'https://rest.api.transifex.com/resource_translations_async_downloads';
-
-        $translations2ExpectedBody = 'mautic.addon.notice.reloaded="%added% addons were added, %updated% updated, and %disabled% disabled."';
-        $translations2Uri          = 'https://rest.api.transifex.com/resource_translations_async_downloads/ab267026-4109-44ef-a13f-3c369d0e8a3c';
-
-        $languagesExpectedBody = <<<EOT
-{
-  "data": {
-    "attributes": {
-      "code": "af",
-      "name": "Afrikaans"
-    }
-  }
-}
-EOT;
-        $languagesUri = 'https://rest.api.transifex.com/languages/l%3Aaf';
-
-        $this->mockHandler->append(
-            $this->getMockResponse(
-                $resourcesExpectedBody,
-                Request::METHOD_GET,
-                $resourcesUri,
-                $headers
+        yield 'fetching language statistics generates response exception' => [
+            sprintf(
+                '[error] Encountered error during fetching statistics for "%1$s" resource',
+                $slug
             ),
-            $this->getMockResponse(
-                $statisticsExpectedBody,
-                Request::METHOD_GET,
-                $statisticsUri,
-                $headers
-            ),
-            $this->getMockResponse(
-                $translationsExpectedBody,
-                Request::METHOD_POST,
-                $translationsUri,
-                array_merge(['Content-Length' => ['498']], $headers)
-            ),
-            $this->getMockResponse(
-                $translations2ExpectedBody,
-                Request::METHOD_GET,
-                $translations2Uri,
-                $headers
-            ),
-            $this->getMockResponse(
-                $languagesExpectedBody,
-                Request::METHOD_GET,
-                $languagesUri,
-                $headers
-            )
-        );
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    'Encountered error during fetching statistics.',
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders(),
+                    400
+                ),
+            ],
+        ];
 
-        $this->commandTester->execute([]);
+        yield 'fetching language statistics for specific language generates response exception' => [
+            sprintf(
+                '[error] Encountered error during fetching statistics for "%1$s" resource of "%2$s" language.',
+                $slug,
+                'es'
+            ),
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    'Encountered error during fetching statistics.',
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project&filter%5Blanguage%5D=l%3Aes",
+                    self::getCommonHeaders(),
+                    400
+                ),
+            ],
+            ['-l' => ['es']],
+        ];
 
-        Assert::assertStringContainsString('[OK] Successfully created language packages for Mautic!', $this->getFixedCommandOutput());
+        yield 'fetching language statistics with filter languages' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+            ],
+            ['-s' => [$language]],
+        ];
+
+        yield 'fetching language statistics with empty bundle and file' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, 'AddonBundleFlashes'),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
+
+        yield 'translation download generates response exception' => [
+            'failed with response 400: Encountered error during translation',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    'Encountered error during translation',
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders()),
+                    400
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
+
+        yield 'translation download generates response exception on fulfillPromises' => [
+            sprintf('[error] Translation download for %1$s failed', "$translationsDir/$language/$bundle/$file.ini"),
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid, 'failed'),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders(),
+                    400
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
+
+        $ini = ";mautic.addon.notice.reloaded=some_translation\n";
+        $ini .= "mautic.addon.notice.reloaded=some_translation\n";
+        $ini .= "no=\"some_translation\"\n";
+        $ini .= "mautic.addon.notice.reloaded=\"some_translation\"\\\\\n";
+        $ini .= "mautic.addon.notice.reloaded='duplicate2'\n";
+
+        yield 'translation download generates invalid ini file' => [
+            sprintf(
+                '[error] Encountered error during "%1$s" download.',
+                "$translationsDir/$language/$bundle/$file.ini"
+            ),
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody($ini),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
+
+        yield 'fetching language details generates response exception' => [
+            sprintf('Encountered error during fetching language "%1$s" details for package build.', $language),
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody(),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    'Encountered error during fetching language.',
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders(),
+                    400
+                ),
+            ],
+        ];
+
+        yield 'build package with filter languages' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody(),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+            ['-s' => ['en']],
+        ];
+
+        yield 'success with filter languages' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody(),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+            ['-s' => ['es', 'en']],
+        ];
+
+        yield 'failure with upload package' => [
+            'Encountered error during language packages upload to AWS S3.',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody(),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($language),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$language",
+                    self::getCommonHeaders()
+                ),
+            ],
+            ['-u' => true],
+        ];
     }
 
-    private function getCommonHeaders(): array
+    private static function getCommonHeaders(): array
     {
         return [
             'User-Agent'    => ['GuzzleHttp/7'],
@@ -218,9 +469,15 @@ EOT;
         ];
     }
 
-    private function getMockResponse(string $body, string $method, string $uri, array $headers): MockResponse
-    {
-        return MockResponse::fromString($body)
+    private static function getMockResponse(
+        string $body,
+        string $method,
+        string $uri,
+        array $headers = [],
+        int $status = 200,
+        array $responseHeaders = []
+    ): MockResponse {
+        return MockResponse::fromString($body, $status, $responseHeaders)
             ->assertRequestMethod($method)
             ->assertRequestUri($uri)
             ->assertRequestHeaders($headers);
@@ -229,5 +486,11 @@ EOT;
     private function getFixedCommandOutput(): string
     {
         return preg_replace('/  +/', ' ', str_replace(PHP_EOL, '', $this->commandTester->getDisplay()));
+    }
+
+    protected function tearDown(): void
+    {
+        $this->restoreTestTranslationsFolder();
+        $this->restoreTestPackagesFolder();
     }
 }
