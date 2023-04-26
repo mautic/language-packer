@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Afrikaans",
+        "code": "af"
+    },
+    {
+        "name": "Arabic",
+        "code": "ar"
+    },
+    {
+        "name": "Czech",
+        "code": "cs"
+    }
+]

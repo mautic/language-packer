@@ -1,6 +1,0 @@
-[
-    {
-        "name": "Afrikaans",
-        "code": "af"
-    }
-]
