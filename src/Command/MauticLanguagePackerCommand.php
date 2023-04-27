@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\BuildPackageService;
+use App\Service\FileManagerService;
 use App\Service\Transifex\DTO\PackageDTO;
 use App\Service\Transifex\DTO\ResourceDTO;
 use App\Service\Transifex\DTO\UploadPackageDTO;
@@ -18,8 +19,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\Filesystem\Filesystem;
 
 #[AsCommand(name: self::NAME, description: 'Creates language packages for Mautic releases')]
 class MauticLanguagePackerCommand extends Command
@@ -27,8 +26,7 @@ class MauticLanguagePackerCommand extends Command
     public const NAME = 'mautic:language:packer';
 
     public function __construct(
-        private readonly ParameterBagInterface $parameterBag,
-        private readonly Filesystem $filesystem,
+        private readonly FileManagerService $fileManagerService,
         private readonly ResourcesService $resourcesService,
         private readonly BuildPackageService $buildPackageService,
         private readonly UploadPackageService $uploadPackageService
@@ -63,16 +61,12 @@ class MauticLanguagePackerCommand extends Command
         $io     = new SymfonyStyle($input, $output);
         $logger = $this->getConsoleLogger($output);
 
-        $packagesDir     = $this->parameterBag->get('mlp.packages.dir');
-        $translationsDir = $this->parameterBag->get('mlp.translations.dir');
-
         $skipLanguages = $input->getOption('skip-languages');
         $languages     = $input->getOption('languages');
         $uploadPackage = $input->getOption('upload-package');
 
         // Remove any previous pulls and rebuild the translations folder
-        $this->filesystem->remove($translationsDir);
-        $this->filesystem->mkdir($translationsDir);
+        $translationsDir = $this->fileManagerService->initTranslationsDir();
 
         // Fetch the project resources now and store them locally
         $resourceDTO   = new ResourceDTO($translationsDir, $skipLanguages, $languages);
@@ -85,12 +79,7 @@ class MauticLanguagePackerCommand extends Command
         }
 
         // Now we start building our ZIP archives
-        $this->filesystem->mkdir($packagesDir);
-
-        // Add a folder for our current build
-        $timestamp            = (new \DateTime())->format('YmdHis');
-        $packagesTimestampDir = $packagesDir.'/'.$timestamp;
-        $this->filesystem->mkdir($packagesTimestampDir);
+        $packagesTimestampDir = $this->fileManagerService->initPackagesDir();
 
         // Compile our data to forward to mautic.org and build the ZIP packages
         $packageDTO = new PackageDTO($translationsDir, $skipLanguages, $packagesTimestampDir);
