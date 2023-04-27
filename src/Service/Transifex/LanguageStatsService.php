@@ -9,7 +9,7 @@ use App\Service\Transifex\DTO\TranslationDTO;
 use Mautic\Transifex\Connector\Statistics;
 use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\TransifexInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Psr\Log\LoggerInterface;
 
 class LanguageStatsService
 {
@@ -19,7 +19,7 @@ class LanguageStatsService
     ) {
     }
 
-    public function getStatistics(ResourceDTO $resourceDTO, ConsoleLogger $logger): void
+    public function getStatistics(ResourceDTO $resourceDTO, LoggerInterface $logger): void
     {
         // Split the name to create our file name
         $resourceNameParts = explode(' ', $resourceDTO->resourceName);
@@ -44,16 +44,16 @@ class LanguageStatsService
     /**
      * @return array<string, string|array<string, string|int|null>>
      */
-    private function getLanguageStats(ResourceDTO $resourceDTO, ConsoleLogger $logger, string $language = ''): array
+    private function getLanguageStats(ResourceDTO $resourceDTO, LoggerInterface $logger, string $language = ''): array
     {
         $data = [];
 
         try {
             $languageStats = $this->transifex->getConnector(Statistics::class);
             $response      = $languageStats->getLanguageStats($resourceDTO->resourceSlug, $language);
-            $statistics    = json_decode($response->getBody()->__toString(), true);
+            $statistics    = json_decode((string) $response->getBody(), true);
             $data          = $statistics['data'] ?? [];
-        } catch (ResponseException $exception) {
+        } catch (ResponseException $e) {
             $message = sprintf(
                 'Encountered error during fetching statistics for "%1$s" resource',
                 $resourceDTO->resourceSlug
@@ -63,7 +63,7 @@ class LanguageStatsService
                 $message .= sprintf(' of "%1$s" language.', $language);
             }
 
-            $message .= ' Error: '.$exception->getMessage();
+            $message .= ' Error: '.$e->getMessage();
             $logger->error($message);
         }
 
@@ -75,7 +75,7 @@ class LanguageStatsService
      */
     private function processLanguageStats(
         ResourceDTO $resourceDTO,
-        ConsoleLogger $logger,
+        LoggerInterface $logger,
         array $languageStats,
         string $bundle,
         string $file

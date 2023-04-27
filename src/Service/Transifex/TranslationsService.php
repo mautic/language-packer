@@ -12,16 +12,19 @@ use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\Promise;
 use Mautic\Transifex\TransifexInterface;
 use Psr\Http\Message\ResponseInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
 class TranslationsService
 {
-    public function __construct(private readonly TransifexInterface $transifex, private readonly Filesystem $filesystem)
-    {
+    public function __construct(
+        private readonly TransifexInterface $transifex,
+        private readonly Filesystem $filesystem,
+        private readonly int $downloadMaxAttempts
+    ) {
     }
 
-    public function getTranslations(TranslationDTO $translationDTO, ConsoleLogger $logger): void
+    public function getTranslations(TranslationDTO $translationDTO, LoggerInterface $logger): void
     {
         $bundlePath = $translationDTO->translationsDir.'/'.$translationDTO->language.'/'.$translationDTO->bundle;
         $filePath   = $bundlePath.'/'.$translationDTO->file.'.ini';
@@ -32,9 +35,7 @@ class TranslationsService
         $this->filesystem->touch($bundlePath, strtotime($translationDTO->lastUpdate));
         $this->filesystem->touch($filePath, strtotime($translationDTO->lastUpdate));
 
-        $maxAttempts = (int) $_ENV['TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS'];
-
-        for ($attempt = 1; $attempt <= $maxAttempts; ++$attempt) {
+        for ($attempt = 1; $attempt <= $this->downloadMaxAttempts; ++$attempt) {
             try {
                 $translations = $this->transifex->getConnector(Translations::class);
                 $response     = $translations->download($translationDTO->slug, $translationDTO->language);
@@ -43,21 +44,21 @@ class TranslationsService
                 $this->fulfillPromises($promise, $logger);
                 $this->ensureFileValid($promise->getFilePath());
                 break;
-            } catch (ResponseException $exception) {
-                if ($attempt === $maxAttempts) {
-                    $this->outputErrors($logger, $filePath, $exception->getMessage());
+            } catch (ResponseException $e) {
+                if ($attempt === $this->downloadMaxAttempts) {
+                    $this->outputErrors($logger, $filePath, $e->getMessage());
                     break;
                 }
 
                 sleep(2 ** $attempt);
-            } catch (InvalidFileException|RegexException $exception) {
-                $this->outputErrors($logger, $filePath, $exception->getMessage());
+            } catch (InvalidFileException|RegexException $e) {
+                $this->outputErrors($logger, $filePath, $e->getMessage());
                 break;
             }
         }
     }
 
-    private function fulfillPromises(Promise $promise, ConsoleLogger $logger): void
+    private function fulfillPromises(Promise $promise, LoggerInterface $logger): void
     {
         $promises = new \SplQueue();
         $promises->enqueue($promise);
@@ -84,15 +85,15 @@ class TranslationsService
                     )
                 );
             },
-            function (ResponseException $exception) use ($promise, $logger) {
+            function (ResponseException $e) use ($promise, $logger) {
                 $logger->error(
                     sprintf(
                         'Translation download for %1$s failed with %2$s.',
                         $promise->getFilePath(),
-                        $exception->getMessage()
+                        $e->getMessage()
                     )
                 );
-                throw $exception;
+                throw $e;
             }
         );
     }
@@ -171,7 +172,7 @@ class TranslationsService
         }
     }
 
-    private function outputErrors(ConsoleLogger $logger, string $filePath, string $message): void
+    private function outputErrors(LoggerInterface $logger, string $filePath, string $message): void
     {
         $logger->error(sprintf('Encountered error during "%1$s" download. Error: %2$s', $filePath, $message));
     }

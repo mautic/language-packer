@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Exception\BuildPackageException;
 use App\Service\Transifex\Connector\Languages;
 use App\Service\Transifex\DTO\PackageDTO;
 use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\TransifexInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
@@ -18,7 +19,7 @@ class BuildPackageService
     {
     }
 
-    public function build(PackageDTO $packageDTO, ConsoleLogger $logger): int
+    public function build(PackageDTO $packageDTO, LoggerInterface $logger): void
     {
         $translationsDirFinder = (new Finder())->sortByName()
             ->depth(0)
@@ -45,7 +46,7 @@ class BuildPackageService
             try {
                 $languageDetails    = $this->transifex->getConnector(Languages::class);
                 $response           = $languageDetails->getLanguageDetails($languageCode);
-                $statistics         = json_decode($response->getBody()->__toString(), true);
+                $statistics         = json_decode((string) $response->getBody(), true);
                 $languageAttributes = $statistics['data']['attributes'] ?? [];
             } catch (ResponseException $exception) {
                 $logger->error(
@@ -64,37 +65,55 @@ class BuildPackageService
                 continue;
             }
 
-            $code           = $languageAttributes['code'] ?? '';
-            $name           = $languageAttributes['name'] ?? '';
-            $languageData[] = ['name' => $name, 'code' => $code];
-
-            $packageMetadata = ['name' => $name, 'locale' => $code, 'author' => 'Mautic Translators'];
-            $configData      = $this->renderConfig($packageMetadata);
-
-            $this->filesystem->dumpFile($languageDir.'/config.php', $configData);
-            $this->filesystem->dumpFile($languageDir.'/config.json', json_encode($packageMetadata)."\n");
-
-            // Hack so we produce exactly the same zip file on each run
-            $this->produceSameZipEachTime($languageDir);
-
-            $this->createZipPackage($languageDir, $packageDTO->packagesTimestampDir, $languageCode);
-
-            // Store the metadata file outside the zip too for easier manipulation with scripts
-            $this->filesystem->copy(
-                $languageDir.'/config.json',
-                $packageDTO->packagesTimestampDir.'/'.$languageCode.'.json'
-            );
-
-            $logger->info(sprintf('Creating package for "%1$s" language.', $languageDir));
+            $languageData[] = $this->doBuild($logger, $packageDTO, $languageAttributes, $languageDir, $languageCode);
         }
 
         // Store the lang data as a backup
         $this->filesystem->dumpFile(
             $packageDTO->packagesTimestampDir.'.txt',
-            json_encode($languageData, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)
+            json_encode($languageData, JSON_PRETTY_PRINT)
         );
 
-        return $error;
+        if ($error) {
+            throw new BuildPackageException('Created language packages for Mautic with some errors.');
+        }
+    }
+
+    /**
+     * @param array<string, array<string|int>> $languageAttributes
+     *
+     * @return array<string, string>
+     */
+    private function doBuild(
+        LoggerInterface $logger,
+        PackageDTO $packageDTO,
+        array $languageAttributes,
+        string $languageDir,
+        string $languageCode
+    ): array {
+        $code = $languageAttributes['code'] ?? '';
+        $name = $languageAttributes['name'] ?? '';
+
+        $packageMetadata = ['name' => $name, 'locale' => $code, 'author' => 'Mautic Translators'];
+        $configData      = $this->renderConfig($packageMetadata);
+
+        $this->filesystem->dumpFile($languageDir.'/config.php', $configData);
+        $this->filesystem->dumpFile($languageDir.'/config.json', json_encode($packageMetadata)."\n");
+
+        // Hack so we produce exactly the same zip file on each run
+        $this->produceSameZipEachTime($languageDir);
+
+        $this->createZipPackage($languageDir, $packageDTO->packagesTimestampDir, $languageCode);
+
+        // Store the metadata file outside the zip too for easier manipulation with scripts
+        $this->filesystem->copy(
+            $languageDir.'/config.json',
+            $packageDTO->packagesTimestampDir.'/'.$languageCode.'.json'
+        );
+
+        $logger->info(sprintf('Creating package for "%1$s" language.', $languageDir));
+
+        return ['name' => $name, 'code' => $code];
     }
 
     /**

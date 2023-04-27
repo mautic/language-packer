@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Transifex;
 
+use App\Exception\ResourceException;
 use App\Service\Transifex\DTO\ResourceDTO;
 use Mautic\Transifex\Connector\Resources;
 use Mautic\Transifex\Exception\ResponseException;
 use Mautic\Transifex\TransifexInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Psr\Log\LoggerInterface;
 
 class ResourcesService
 {
@@ -18,22 +19,15 @@ class ResourcesService
     ) {
     }
 
-    public function processAllResources(ResourceDTO $resourceDTO, ConsoleLogger $logger): int
+    public function processAllResources(ResourceDTO $resourceDTO, LoggerInterface $logger): void
     {
         try {
             $resources    = $this->transifex->getConnector(Resources::class);
             $response     = $resources->getAll();
-            $body         = json_decode($response->getBody()->__toString(), true);
+            $body         = json_decode((string) $response->getBody(), true);
             $resourceData = $body['data'] ?? [];
-        } catch (ResponseException $exception) {
-            $logger->error(
-                sprintf(
-                    'Encountered error during fetching all resources. Error: %1$s',
-                    $exception->getMessage()
-                )
-            );
-
-            return 1;
+        } catch (ResponseException $e) {
+            throw new ResourceException($e->getMessage(), $e->getCode(), $e);
         }
 
         $logger->info(sprintf('Processing "%1$d" resources.', count($resourceData)));
@@ -50,7 +44,5 @@ class ResourcesService
             $resourceDTO->resourceName = $name;
             $this->languageStatsService->getStatistics($resourceDTO, $logger);
         }
-
-        return 0;
     }
 }

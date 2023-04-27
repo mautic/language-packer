@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Aws\S3Config;
+use App\Exception\UploadPackageException;
 use App\Service\Transifex\DTO\UploadPackageDTO;
 use Aws\S3\S3Client;
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\Finder;
 
 class UploadPackageService
 {
-    public function __construct(private readonly S3Client $client)
+    public function __construct(private readonly S3Client $client, private readonly S3Config $config)
     {
     }
 
-    public function uploadPackage(UploadPackageDTO $uploadPackageDTO, ConsoleLogger $logger): int
+    public function uploadPackage(UploadPackageDTO $uploadPackageDTO, LoggerInterface $logger): void
     {
         $packagesTimestampDirFinder = (new Finder())
             ->sortByName()
@@ -31,7 +33,7 @@ class UploadPackageService
 
             try {
                 // Remove our existing objects and upload fresh items
-                $this->client->deleteMatchingObjects($_ENV['AWS_S3_BUCKET'], $key);
+                $this->client->deleteMatchingObjects($this->config->bucket, $key);
             } catch (\Exception $exception) {
                 $logger->error(
                     sprintf(
@@ -44,17 +46,17 @@ class UploadPackageService
                 continue;
             }
 
+            $stream = fopen($uploadPackageDTO->packagesTimestampDir.'/'.$fileName, 'rb');
+
             try {
-                $stream = fopen($uploadPackageDTO->packagesTimestampDir.'/'.$fileName, 'rb');
                 $result = $this->client->putObject(
                     [
-                        'Bucket' => $_ENV['AWS_S3_BUCKET'],
+                        'Bucket' => $this->config->bucket,
                         'Key'    => $key,
                         'Body'   => $stream,
                         'ACL'    => 'public-read',
                     ]
                 );
-                fclose($stream);
                 $logger->info(
                     sprintf(
                         'Uploaded %1$s to AWS S3, URL: %2$s.',
@@ -63,7 +65,6 @@ class UploadPackageService
                     )
                 );
             } catch (\Exception $exception) {
-                fclose($stream);
                 $logger->error(
                     sprintf(
                         'Encountered error during "%1$s" upload. Error: %2$s',
@@ -72,10 +73,13 @@ class UploadPackageService
                     )
                 );
                 $error = 1;
-                continue;
+            } finally {
+                fclose($stream);
             }
         }
 
-        return $error;
+        if ($error) {
+            throw new UploadPackageException('Encountered error during language packages upload to AWS S3.');
+        }
     }
 }
