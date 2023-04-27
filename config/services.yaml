@@ -45,3 +45,9 @@ services: # default configuration for services in *this* file
 
   Mautic\Transifex\TransifexInterface:
     class: Mautic\Transifex\Transifex
+
+  App\Service\FileManagerService:
+    class: App\Service\FileManagerService
+    arguments:
+      $packagesDir: '%mlp.packages.dir%'
+      $translationsDir: '%mlp.translations.dir%'
