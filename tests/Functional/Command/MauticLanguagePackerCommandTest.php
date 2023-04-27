@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Command;
 
 use App\Command\MauticLanguagePackerCommand;
 use App\Service\BuildPackageService;
+use App\Service\FileManagerService;
 use App\Service\Transifex\ResourcesService;
 use App\Service\UploadPackageService;
 use App\Tests\Common\Client\MockResponse;
@@ -19,7 +20,6 @@ use Psr\Http\Message\ResponseInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
 
 class MauticLanguagePackerCommandTest extends KernelTestCase
@@ -28,27 +28,18 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
 
     private CommandTester $commandTester;
 
-    private Filesystem $filesystem;
-
-    private string $packagesDir;
-
-    private string $translationsDir;
-
     private MockHandler $mockHandler;
 
     private AwsMockHandler $awsMockHandler;
 
     protected function setUp(): void
     {
-        $container        = self::getContainer();
-        $parameterBag     = $container->get('parameter_bag');
-        $this->filesystem = $container->get('filesystem');
+        $container = self::getContainer();
 
         $application = new Application();
         $application->add(
             new MauticLanguagePackerCommand(
-                $parameterBag,
-                $this->filesystem,
+                $container->get(FileManagerService::class),
                 $container->get(ResourcesService::class),
                 $container->get(BuildPackageService::class),
                 $container->get(UploadPackageService::class)
@@ -56,9 +47,6 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         );
         $command             = $application->find(MauticLanguagePackerCommand::NAME);
         $this->commandTester = new CommandTester($command);
-
-        $this->packagesDir     = $parameterBag->get('mlp.packages.dir');
-        $this->translationsDir = $parameterBag->get('mlp.translations.dir');
 
         $this->mockHandler    = $container->get('http.client.mock_handler');
         $this->awsMockHandler = $container->get('aws.client.mock_handler');
@@ -94,9 +82,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
      */
     public static function provideExecutionData(): iterable
     {
-        $container       = self::getContainer();
-        $parameterBag    = $container->get('parameter_bag');
-        $translationsDir = $parameterBag->get('mlp.translations.dir');
+        $translationsDir = self::getContainer()->get('parameter_bag')->get('mlp.translations.dir');
 
         $organisation = $_ENV['TRANSIFEX_ORGANISATION'];
         $project      = $_ENV['TRANSIFEX_PROJECT'];
@@ -602,7 +588,12 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        $this->filesystem->remove($this->translationsDir);
-        $this->filesystem->remove($this->packagesDir);
+        $container = self::getContainer();
+
+        $parameterBag = $container->get('parameter_bag');
+        $filesystem   = $container->get('filesystem');
+
+        $filesystem->remove($parameterBag->get('mlp.translations.dir'));
+        $filesystem->remove($parameterBag->get('mlp.packages.dir'));
     }
 }
