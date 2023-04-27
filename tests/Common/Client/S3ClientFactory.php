@@ -12,7 +12,7 @@ class S3ClientFactory
 {
     public static function create(MockHandler $handler): S3ClientInterface
     {
-        $s3client = new S3Client([
+        return new S3Client([
             'version'     => $_ENV['AWS_S3_VERSION'],
             'region'      => $_ENV['AWS_S3_REGION'],
             'credentials' => [
@@ -21,7 +21,5 @@ class S3ClientFactory
             ],
             'handler' => $handler,
         ]);
-
-        return $s3client;
     }
 }
