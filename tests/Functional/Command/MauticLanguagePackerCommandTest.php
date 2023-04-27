@@ -15,6 +15,7 @@ use Aws\MockHandler as AwsMockHandler;
 use Aws\Result;
 use Aws\ResultInterface;
 use GuzzleHttp\Handler\MockHandler;
+use Mautic\Transifex\ConfigInterface;
 use PHPUnit\Framework\Assert;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -48,8 +49,8 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         $command             = $application->find(MauticLanguagePackerCommand::NAME);
         $this->commandTester = new CommandTester($command);
 
-        $this->mockHandler    = $container->get('http.client.mock_handler');
-        $this->awsMockHandler = $container->get('aws.client.mock_handler');
+        $this->mockHandler    = $container->get(MockHandler::class);
+        $this->awsMockHandler = $container->get(AwsMockHandler::class);
     }
 
     /**
@@ -82,10 +83,12 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
      */
     public static function provideExecutionData(): iterable
     {
-        $translationsDir = self::getContainer()->get('parameter_bag')->get('mlp.translations.dir');
+        $container       = self::getContainer();
+        $translationsDir = $container->get('parameter_bag')->get('mlp.translations.dir');
+        $transifexConfig = $container->get(ConfigInterface::class);
 
-        $organisation = $_ENV['TRANSIFEX_ORGANISATION'];
-        $project      = $_ENV['TRANSIFEX_PROJECT'];
+        $organisation = $transifexConfig->getOrganization();
+        $project      = $transifexConfig->getProject();
 
         $slug     = 'addonbundle-flashes';
         $bundle   = 'AddonBundle';
