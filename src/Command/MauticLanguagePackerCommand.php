@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Exception\BuildPackageException;
+use App\Exception\ResourceException;
+use App\Exception\UploadPackageException;
 use App\Service\BuildPackageService;
 use App\Service\FileManagerService;
 use App\Service\Transifex\DTO\PackageDTO;
@@ -69,11 +72,12 @@ class MauticLanguagePackerCommand extends Command
         $translationsDir = $this->fileManagerService->initTranslationsDir();
 
         // Fetch the project resources now and store them locally
-        $resourceDTO   = new ResourceDTO($translationsDir, $skipLanguages, $languages);
-        $resourceError = $this->resourcesService->processAllResources($resourceDTO, $logger);
+        $resourceDTO = new ResourceDTO($translationsDir, $skipLanguages, $languages);
 
-        if ($resourceError) {
-            $io->error('Encountered error during fetching all resources.');
+        try {
+            $this->resourcesService->processAllResources($resourceDTO, $logger);
+        } catch (ResourceException $e) {
+            $io->error(sprintf('Encountered error during fetching all resources. Error: %s', $e->getMessage()));
 
             return Command::FAILURE;
         }
@@ -83,24 +87,25 @@ class MauticLanguagePackerCommand extends Command
 
         // Compile our data to forward to mautic.org and build the ZIP packages
         $packageDTO = new PackageDTO($translationsDir, $skipLanguages, $packagesTimestampDir);
-        $buildError = $this->buildPackageService->build($packageDTO, $logger);
 
-        if ($buildError) {
-            $io->warning('Created language packages for Mautic with some errors.');
-        } else {
+        try {
+            $this->buildPackageService->build($packageDTO, $logger);
             $io->success('Successfully created language packages for Mautic!');
+        } catch (BuildPackageException $e) {
+            $io->warning($e->getMessage());
         }
 
         // If instructed, upload the packages
         if ($uploadPackage) {
             $io->info('Starting package upload to AWS S3.');
-            $uploadPackageDTO = new UploadPackageDTO($packagesTimestampDir);
-            $uploadError      = $this->uploadPackageService->uploadPackage($uploadPackageDTO, $logger);
-
-            if ($uploadError) {
-                $io->error('Encountered error during language packages upload to AWS S3.');
-            } else {
+            try {
+                $this->uploadPackageService->uploadPackage(
+                    new UploadPackageDTO($packagesTimestampDir),
+                    $logger
+                );
                 $io->success('Successfully uploaded language packages to AWS S3!');
+            } catch (UploadPackageException $e) {
+                $io->error($e->getMessage());
             }
         }
 
