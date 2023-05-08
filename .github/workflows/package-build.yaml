@@ -1,0 +1,40 @@
+name: Mautic language packs
+on:
+    schedule:
+        -   cron: '0 * * * *'
+
+env:
+    SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        container:
+            image: php:8.1
+        steps:
+            -   name: Checkout code
+                uses: actions/checkout@v2
+
+            -   name: Install composer
+                run: |
+                    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+            -   name: Install dependencies
+                run: |
+                    apt-get update && apt-get install -y git jq ssh unzip zip
+                    mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+                    composer install
+
+            -   name: Build packages
+                run: |
+                    cp ${{ env.SSH_PRIVATE_KEY }} ~/.ssh/id_rsa
+                    bin/console m:l:p
+                    mkdir -p PACKS
+                    cp -R packages/*/* PACKS/
+                    cd PACKS
+                    jq -s '{"languages":.}' *.json > manifest.json
+                    git config user.name "Automated build"
+                    git config user.email "action@github.com"
+                    git add .
+                    git commit -m "automatic language build"
+#                    git push origin HEAD:master
