@@ -16,7 +16,7 @@ The default application configuration is stored at `.env` and can be overridden 
 ```dotenv
 ###> symfony/framework-bundle ###
 APP_ENV=prod
-# change below to your desired secret
+# change below to your desired secret for Symfony app to work
 APP_SECRET=c85b90b0d096eb714652f175409489bb
 ###< symfony/framework-bundle ###
 ```
