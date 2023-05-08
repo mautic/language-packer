@@ -63,6 +63,7 @@ class TranslationsService
         $promises = new \SplQueue();
         $promises->enqueue($promise);
 
+        // Give Transifex a 1/2 second, so we make 1 request instead of 2.
         usleep(500000);
 
         $this->transifex->getApiConnector()->fulfillPromises(
