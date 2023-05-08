@@ -56,7 +56,7 @@ class BuildPackageService
                         $exception->getMessage()
                     )
                 );
-                $error = 1;
+                ++$error;
 
                 continue;
             }
@@ -75,7 +75,7 @@ class BuildPackageService
         );
 
         if ($error) {
-            throw new BuildPackageException('Created language packages for Mautic with some errors.');
+            throw new BuildPackageException("Created language packages for Mautic with {$error} errors. Check logs for details");
         }
     }
 
