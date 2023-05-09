@@ -22,9 +22,6 @@ jobs:
       - name: Install PHP zip extension
         run: apt-get update && apt-get install -y libzip-dev && docker-php-ext-install zip
 
-      - name: Verify PHP zip extension
-        run: php -m | grep zip
-
       - name: Checkout code
         uses: actions/checkout@v3
 
