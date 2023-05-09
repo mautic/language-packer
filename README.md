@@ -68,3 +68,10 @@ To run functional tests `composer test -- --testsuite=Functional`
 To run fixes by friendsofphp/php-cs-fixer `composer fixcs`
 
 To run phpstan `composer phpstan`
+
+### GitHub actions
+
+In `https://github.com/<username>/language-packer/settings/secrets/actions/new`, add following action secrets:
+1. `TRANSIFEX_API_TOKEN` // Generate a Transifex API token from https://app.transifex.com/user/settings/api/
+2. `TRANSIFEX_ORGANISATION`
+3. `TRANSIFEX_PROJECT`
