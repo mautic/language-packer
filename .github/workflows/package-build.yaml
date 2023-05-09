@@ -9,7 +9,6 @@ on:
     - cron: '0 * * * *'
 
 env:
-  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
   TRANSIFEX_API_TOKEN: ${{ secrets.TRANSIFEX_API_TOKEN }}
   TRANSIFEX_ORGANISATION: ${{ secrets.TRANSIFEX_ORGANISATION }}
   TRANSIFEX_PROJECT: ${{ secrets.TRANSIFEX_PROJECT }}
@@ -41,7 +40,6 @@ jobs:
 
       - name: Build packages
         run: |
-          cp ${{ env.SSH_PRIVATE_KEY }} ~/.ssh/id_rsa
           bin/console m:l:p
           mkdir -p PACKS
           cp -R packages/*/* PACKS/
