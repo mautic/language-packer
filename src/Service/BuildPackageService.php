@@ -142,17 +142,27 @@ class BuildPackageService
 
     private function createZipPackage(string $languageDir, string $packagesTimestampDir, string $languageCode): void
     {
-        $zipArchive        = new \ZipArchive();
-        $languageDirFinder = (new Finder())->sortByName()->in($languageDir)->files();
+        $zipArchive = new \ZipArchive();
 
-        if ($zipArchive->open($languageDir.'.zip', \ZipArchive::CREATE)) {
+        if ($zipArchive->open($packagesTimestampDir.'/'.$languageCode.'.zip', \ZipArchive::CREATE)) {
+            $languageDirFinder = (new Finder())->in($languageDir)->ignoreDotFiles(true)->ignoreVCS(true);
+
             foreach ($languageDirFinder as $file) {
-                $zipArchive->addFile($file->getPathname(), $file->getBasename());
+                if ($file->isFile()) {
+                    $filePath     = $file->getRealPath();
+                    $relativePath = $file->getRelativePathname();
+
+                    // Add the directory if it hasn't already been added
+                    $directory = dirname($relativePath);
+                    if (!$zipArchive->getFromName($directory.'/') && '.' != $directory) {
+                        $zipArchive->addEmptyDir($directory);
+                    }
+
+                    $zipArchive->addFile($filePath, $relativePath);
+                }
             }
 
             $zipArchive->close();
         }
-
-        $this->filesystem->rename($languageDir.'.zip', $packagesTimestampDir.'/'.$languageCode.'.zip');
     }
 }
