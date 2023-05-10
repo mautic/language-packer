@@ -19,6 +19,7 @@
     <env name="TRANSIFEX_ORGANISATION" value="not-a-real-organisation"/>
     <env name="TRANSIFEX_PROJECT" value="not-a-real-project"/>
     <env name="TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS" value="1"/>
+    <env name="TRANSIFEX_COMPLETION" value="80"/>
 
     <env name="AWS_KEY" value="not-a-real-key"/>
     <env name="AWS_SECRET" value="not-a-real-secret"/>

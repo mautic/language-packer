@@ -57,6 +57,12 @@ class MauticLanguagePackerCommand extends Command
             InputOption::VALUE_NONE,
             'Upload the package to AWS S3. For e.g. bin/console '.self::NAME.' -u.'
         );
+        $this->addOption(
+            'bypass-completion',
+            'b',
+            InputOption::VALUE_NONE,
+            'Bypass translation completion. For e.g. bin/console '.self::NAME.' -b.'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -64,15 +70,16 @@ class MauticLanguagePackerCommand extends Command
         $io     = new SymfonyStyle($input, $output);
         $logger = $this->getConsoleLogger($output);
 
-        $skipLanguages = $input->getOption('skip-languages');
-        $languages     = $input->getOption('languages');
-        $uploadPackage = $input->getOption('upload-package');
+        $skipLanguages    = $input->getOption('skip-languages');
+        $languages        = $input->getOption('languages');
+        $uploadPackage    = $input->getOption('upload-package');
+        $byPassCompletion = $input->getOption('bypass-completion');
 
         // Remove any previous pulls and rebuild the translations folder
         $translationsDir = $this->fileManagerService->initTranslationsDir();
 
         // Fetch the project resources now and store them locally
-        $resourceDTO = new ResourceDTO($translationsDir, $skipLanguages, $languages);
+        $resourceDTO = new ResourceDTO($translationsDir, $skipLanguages, $languages, $byPassCompletion);
 
         try {
             $this->resourcesService->processAllResources($resourceDTO, $logger);

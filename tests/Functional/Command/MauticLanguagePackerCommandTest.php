@@ -200,6 +200,24 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             ],
         ];
 
+        yield 'fetching language statistics with less than 80 completion percent' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($slug, $resource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($resource, $language, 60),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
+
         yield 'translation download generates response exception' => [
             'failed with response 400: Encountered error during translation',
             [

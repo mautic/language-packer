@@ -15,7 +15,8 @@ class LanguageStatsService
 {
     public function __construct(
         private readonly TransifexInterface $transifex,
-        private readonly TranslationsService $translationsService
+        private readonly TranslationsService $translationsService,
+        private readonly int $completion
     ) {
     }
 
@@ -42,7 +43,7 @@ class LanguageStatsService
     }
 
     /**
-     * @return array<string, string|array<string, string|int|null>>
+     * @return array<int,array<string,mixed>>
      */
     private function getLanguageStats(ResourceDTO $resourceDTO, LoggerInterface $logger, string $language = ''): array
     {
@@ -71,7 +72,7 @@ class LanguageStatsService
     }
 
     /**
-     * @param array<string, string|array<string, string|int|null>> $languageStats
+     * @param array<int,array<string,mixed>> $languageStats
      */
     private function processLanguageStats(
         ResourceDTO $resourceDTO,
@@ -81,30 +82,37 @@ class LanguageStatsService
         string $file
     ): void {
         foreach ($languageStats as $languageStat) {
-            $idParts  = explode(':', $languageStat['id']);
-            $language = end($idParts);
+            $attributes       = $languageStat['attributes'] ?? [];
+            $translatedWords  = $attributes['translated_words'] ?? 0;
+            $totalWords       = $attributes['total_words'] ?? 0;
+            $completedPercent = $totalWords ? ($translatedWords / $totalWords) * 100 : 0;
 
-            if (in_array($language, $resourceDTO->skipLanguages, true)) {
-                continue;
-            }
+            if ($resourceDTO->byPassCompletion || $completedPercent >= $this->completion) {
+                $idParts  = explode(':', $languageStat['id']);
+                $language = end($idParts);
 
-            $logger->info(
-                sprintf(
-                    'Processing the %1$s "%2$s" resource in "%3$s" language.',
+                if (in_array($language, $resourceDTO->skipLanguages, true)) {
+                    continue;
+                }
+
+                $logger->info(
+                    sprintf(
+                        'Processing the %1$s "%2$s" resource in "%3$s" language.',
+                        $bundle,
+                        $file,
+                        $language
+                    )
+                );
+                $translationDTO = new TranslationDTO(
+                    $resourceDTO->translationsDir,
+                    $resourceDTO->resourceSlug,
+                    $language,
                     $bundle,
                     $file,
-                    $language
-                )
-            );
-            $translationDTO = new TranslationDTO(
-                $resourceDTO->translationsDir,
-                $resourceDTO->resourceSlug,
-                $language,
-                $bundle,
-                $file,
-                $languageStat['attributes']['last_update'] ?? ''
-            );
-            $this->translationsService->getTranslations($translationDTO, $logger);
+                    $attributes['last_update'] ?? ''
+                );
+                $this->translationsService->getTranslations($translationDTO, $logger);
+            }
         }
     }
 }

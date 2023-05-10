@@ -14,6 +14,7 @@ class ResourceDTO
         public readonly string $translationsDir,
         public readonly array $skipLanguages,
         public readonly array $languages,
+        public readonly bool $byPassCompletion,
         public string $resourceSlug = '',
         public string $resourceName = ''
     ) {

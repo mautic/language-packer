@@ -60,3 +60,7 @@ services: # default configuration for services in *this* file
   App\Service\Transifex\TranslationsService:
     arguments:
       $downloadMaxAttempts: '%env(int:TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS)%'
+
+  App\Service\Transifex\LanguageStatsService:
+    arguments:
+      $completion: '%env(int:TRANSIFEX_COMPLETION)%'

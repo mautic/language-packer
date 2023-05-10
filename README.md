@@ -28,6 +28,7 @@ TRANSIFEX_API_TOKEN=not-a-real-api-token
 TRANSIFEX_ORGANISATION=not-a-real-organisation
 TRANSIFEX_PROJECT=not-a-real-project
 TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS=3
+TRANSIFEX_COMPLETION=80
 ###< mautic/transifex ###
 ```
 
@@ -46,6 +47,8 @@ AWS_S3_VERSION=2006-03-01
 ### Building Packages
 
 The simplest manner to build packages is to execute `bin/console mautic:language:packer` from your command line interface.
+
+By default, the command checks for a minimum completion level of a resource before downloading it. This behavior is similar to Mautic's `mautic:transifex:pull` behavior, except that the completion percentage may be customized via the `TRANSIFEX_COMPLETION` .env or bypassed completely via the `--bypass-completion` or `-b` option, e.g. `bin/console mautic:language:packer -b`.
 
 You may filter some unwanted languages by passing the `--skip-languages` or `-s` option, e.g. `bin/console mautic:language:packer -s es -s en`.
 
