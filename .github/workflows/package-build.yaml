@@ -38,7 +38,7 @@ jobs:
       - name: Build packages
         run: |
           bin/console m:l:p
-          mkdir -p PACKS
+          git clone -b master git@github.com:ts-navghane/language-packs.git PACKS
           cp -R packages/*/* PACKS/
           cd PACKS
           jq -s '{"languages":.}' *.json > manifest.json
@@ -46,4 +46,4 @@ jobs:
           git config user.email "action@github.com"
           git add .
           git commit -m "automatic language build"
-#          git push origin HEAD:master
+          git push origin HEAD:master
