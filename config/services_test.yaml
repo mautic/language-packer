@@ -9,12 +9,3 @@ services:
     factory: [ 'App\Tests\Common\Client\ClientFactory', 'create' ]
     arguments:
       $handler: '@GuzzleHttp\Handler\MockHandler'
-
-  Aws\MockHandler:
-
-  aws.s3:
-    class: Aws\S3\S3Client
-    factory: [ 'App\Tests\Common\Client\S3ClientFactory', 'create' ]
-    arguments:
-      $handler: '@Aws\MockHandler'
-      $config: '@App\Aws\S3Config'

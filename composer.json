@@ -11,7 +11,6 @@
     "ext-iconv": "*",
     "ext-json": "*",
     "ext-zip": "*",
-    "aws/aws-sdk-php-symfony": "^2.6",
     "guzzlehttp/guzzle": "^7.5",
     "http-interop/http-factory-guzzle": "^1.2",
     "mautic/transifex": "^5.0",

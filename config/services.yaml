@@ -51,12 +51,6 @@ services: # default configuration for services in *this* file
       $packagesDir: '%mlp.packages.dir%'
       $translationsDir: '%mlp.translations.dir%'
 
-  App\Aws\S3Config:
-    arguments:
-      $bucket: '%env(AWS_S3_BUCKET)%'
-      $version: '%env(AWS_S3_VERSION)%'
-      $region: '%env(AWS_S3_REGION)%'
-
   App\Service\Transifex\TranslationsService:
     arguments:
       $downloadMaxAttempts: '%env(int:TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS)%'

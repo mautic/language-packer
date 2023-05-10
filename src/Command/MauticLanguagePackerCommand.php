@@ -6,14 +6,11 @@ namespace App\Command;
 
 use App\Exception\BuildPackageException;
 use App\Exception\ResourceException;
-use App\Exception\UploadPackageException;
 use App\Service\BuildPackageService;
 use App\Service\FileManagerService;
 use App\Service\Transifex\DTO\PackageDTO;
 use App\Service\Transifex\DTO\ResourceDTO;
-use App\Service\Transifex\DTO\UploadPackageDTO;
 use App\Service\Transifex\ResourcesService;
-use App\Service\UploadPackageService;
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -31,8 +28,7 @@ class MauticLanguagePackerCommand extends Command
     public function __construct(
         private readonly FileManagerService $fileManagerService,
         private readonly ResourcesService $resourcesService,
-        private readonly BuildPackageService $buildPackageService,
-        private readonly UploadPackageService $uploadPackageService
+        private readonly BuildPackageService $buildPackageService
     ) {
         parent::__construct();
     }
@@ -52,12 +48,6 @@ class MauticLanguagePackerCommand extends Command
             'Process languages. For e.g. bin/console '.self::NAME.' -l es -l en.'
         );
         $this->addOption(
-            'upload-package',
-            'u',
-            InputOption::VALUE_NONE,
-            'Upload the package to AWS S3. For e.g. bin/console '.self::NAME.' -u.'
-        );
-        $this->addOption(
             'bypass-completion',
             'b',
             InputOption::VALUE_NONE,
@@ -72,7 +62,6 @@ class MauticLanguagePackerCommand extends Command
 
         $skipLanguages    = $input->getOption('skip-languages');
         $languages        = $input->getOption('languages');
-        $uploadPackage    = $input->getOption('upload-package');
         $byPassCompletion = $input->getOption('bypass-completion');
 
         // Remove any previous pulls and rebuild the translations folder
@@ -100,20 +89,6 @@ class MauticLanguagePackerCommand extends Command
             $io->success('Successfully created language packages for Mautic!');
         } catch (BuildPackageException $e) {
             $io->warning($e->getMessage());
-        }
-
-        // If instructed, upload the packages
-        if ($uploadPackage) {
-            $io->info('Starting package upload to AWS S3.');
-            try {
-                $this->uploadPackageService->uploadPackage(
-                    new UploadPackageDTO($packagesTimestampDir),
-                    $logger
-                );
-                $io->success('Successfully uploaded language packages to AWS S3!');
-            } catch (UploadPackageException $e) {
-                $io->error($e->getMessage());
-            }
         }
 
         return Command::SUCCESS;

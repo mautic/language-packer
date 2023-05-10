@@ -8,12 +8,8 @@ use App\Command\MauticLanguagePackerCommand;
 use App\Service\BuildPackageService;
 use App\Service\FileManagerService;
 use App\Service\Transifex\ResourcesService;
-use App\Service\UploadPackageService;
 use App\Tests\Common\Client\MockResponse;
 use App\Tests\Common\Trait\ResponseBodyBuilderTrait;
-use Aws\MockHandler as AwsMockHandler;
-use Aws\Result;
-use Aws\ResultInterface;
 use GuzzleHttp\Handler\MockHandler;
 use Mautic\Transifex\ConfigInterface;
 use PHPUnit\Framework\Assert;
@@ -31,8 +27,6 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
 
     private MockHandler $mockHandler;
 
-    private AwsMockHandler $awsMockHandler;
-
     protected function setUp(): void
     {
         $container = self::getContainer();
@@ -42,36 +36,28 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             new MauticLanguagePackerCommand(
                 $container->get(FileManagerService::class),
                 $container->get(ResourcesService::class),
-                $container->get(BuildPackageService::class),
-                $container->get(UploadPackageService::class)
+                $container->get(BuildPackageService::class)
             )
         );
         $command             = $application->find(MauticLanguagePackerCommand::NAME);
         $this->commandTester = new CommandTester($command);
 
-        $this->mockHandler    = $container->get(MockHandler::class);
-        $this->awsMockHandler = $container->get(AwsMockHandler::class);
+        $this->mockHandler = $container->get(MockHandler::class);
     }
 
     /**
      * @dataProvider provideExecutionData
      *
-     * @param ResponseInterface[]                   $mockResponses
-     * @param array<string, string[]>               $commandArguments
-     * @param ResultInterface[]|\RuntimeException[] $awsMockResponses
+     * @param ResponseInterface[]     $mockResponses
+     * @param array<string, string[]> $commandArguments
      */
     public function testExecute(
         string $expectedOutput,
         array $mockResponses,
-        array $commandArguments = [],
-        array $awsMockResponses = []
+        array $commandArguments = []
     ): void {
         foreach ($mockResponses as $mockResponse) {
             $this->mockHandler->append($mockResponse);
-        }
-
-        foreach ($awsMockResponses as $awsMockResponse) {
-            $this->awsMockHandler->append($awsMockResponse);
         }
 
         $this->commandTester->execute($commandArguments);
@@ -440,133 +426,6 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
                 ),
             ],
             ['-s' => ['es', 'en']],
-        ];
-
-        yield 'failure with upload package when deleting matching objects' => [
-            'Encountered error during language packages upload to AWS S3.',
-            [
-                self::getMockResponse(
-                    self::buildResourcesBody($slug, $resource),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildResourceLanguageStatsBody($resource, $language),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildTranslationsBody($uuid),
-                    Request::METHOD_POST,
-                    'https://rest.api.transifex.com/resource_translations_async_downloads',
-                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
-                ),
-                self::getMockResponse(
-                    self::buildIniBody(),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildLanguagesBody($language),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/languages/l%3A$language",
-                    self::getCommonHeaders()
-                ),
-            ],
-            ['-u' => true],
-            [
-                new \RuntimeException('Error during deleteMatchingObjects() for af.json'),
-                new \RuntimeException('Error during deleteMatchingObjects() for af.zip'),
-            ],
-        ];
-
-        yield 'failure with upload package when calling putObject()' => [
-            'Encountered error during language packages upload to AWS S3.',
-            [
-                self::getMockResponse(
-                    self::buildResourcesBody($slug, $resource),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildResourceLanguageStatsBody($resource, $language),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildTranslationsBody($uuid),
-                    Request::METHOD_POST,
-                    'https://rest.api.transifex.com/resource_translations_async_downloads',
-                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
-                ),
-                self::getMockResponse(
-                    self::buildIniBody(),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildLanguagesBody($language),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/languages/l%3A$language",
-                    self::getCommonHeaders()
-                ),
-            ],
-            ['-u' => true],
-            [
-                new Result(['calling deleteMatchingObjects() for af.json']),
-                new \RuntimeException('Error during putObject() for af.json'),
-                new Result(['calling deleteMatchingObjects() for af.zip']),
-                new \RuntimeException('Error during putObject() for af.zip'),
-            ],
-        ];
-
-        yield 'success with upload package' => [
-            'Successfully uploaded language packages to AWS S3!',
-            [
-                self::getMockResponse(
-                    self::buildResourcesBody($slug, $resource),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildResourceLanguageStatsBody($resource, $language),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildTranslationsBody($uuid),
-                    Request::METHOD_POST,
-                    'https://rest.api.transifex.com/resource_translations_async_downloads',
-                    array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
-                ),
-                self::getMockResponse(
-                    self::buildIniBody(),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
-                    self::getCommonHeaders()
-                ),
-                self::getMockResponse(
-                    self::buildLanguagesBody($language),
-                    Request::METHOD_GET,
-                    "https://rest.api.transifex.com/languages/l%3A$language",
-                    self::getCommonHeaders()
-                ),
-            ],
-            ['-u' => true],
-            [
-                new Result(['calling deleteMatchingObjects() for af.json']),
-                new Result(['calling putObject() for af.json']),
-                new Result(['calling deleteMatchingObjects() for af.zip']),
-                new Result(['calling putObject() for af.zip']),
-            ],
         ];
     }
 

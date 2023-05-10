@@ -32,18 +32,6 @@ TRANSIFEX_COMPLETION=80
 ###< mautic/transifex ###
 ```
 
-```dotenv
-###> aws/aws-sdk-php-symfony ###
-AWS_KEY=not-a-real-key
-AWS_SECRET=not-a-real-secret
-AWS_VERSION=latest
-AWS_REGION=us-west-2
-AWS_S3_BUCKET=not-a-real-bucket
-AWS_S3_REGION=us-west-2
-AWS_S3_VERSION=2006-03-01
-###< aws/aws-sdk-php-symfony ###
-```
-
 ### Building Packages
 
 The simplest manner to build packages is to execute `bin/console mautic:language:packer` from your command line interface.
@@ -55,8 +43,6 @@ You may filter some unwanted languages by passing the `--skip-languages` or `-s`
 You may process only some languages by passing the `--languages` or `-l` option, e.g. `bin/console mautic:language:packer -l af -l hi`.
 
 If some file fails sanity validation (checks to make sure ini file is valid) its entire language will be pulled from processing to make sure we do not overwrite older bundles with incomplete translations.
-
-To upload packages to AWS S3, you must pass the `--upload-package` or `-u` option when executing the script, e.g. `bin/console mautic:language:packer -u`.  The `amazon` settings must be configured prior to this in .env. The Amazon Web Services account must have permissions to create, edit, and delete objects (and their associated ACL settings) on your S3 instance.
 
 ### Testing
 
