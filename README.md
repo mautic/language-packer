@@ -38,6 +38,44 @@ The simplest manner to build packages is to execute `bin/console mautic:language
 
 By default, the command checks for a minimum completion level of a resource before downloading it. This behavior is similar to Mautic's `mautic:transifex:pull` behavior, except that the completion percentage may be customized via the `TRANSIFEX_COMPLETION` .env or bypassed completely via the `--bypass-completion` or `-b` option, e.g. `bin/console mautic:language:packer -b`.
 
+##### Note: Since Transifex API V3, there is no way to know the completion percent stat of a resource.
+
+https://developers.transifex.com/reference/get_resource-language-stats response is below:
+
+```json
+{
+  ...,
+  "data": [
+    {
+      "id": "o:some-organisation:p:some-project:r:corebundle-flashes:l:af",
+      "type": "resource_language_stats",
+      "attributes": {
+        "untranslated_words": 296,
+        "translated_words": 0,
+        "reviewed_words": 0,
+        "proofread_words": 0,
+        "total_words": 296,
+        "untranslated_strings": 28,
+        "translated_strings": 0,
+        "reviewed_strings": 0,
+        "proofread_strings": 0,
+        "total_strings": 28,
+        "last_update": "2015-05-21T08:06:10Z",
+        "last_translation_update": null,
+        "last_review_update": null,
+        "last_proofread_update": null
+      },
+      ...
+    },
+    {
+      ...
+    }
+  ]
+}
+```
+Considering above JSON response, we calculate the completion percent using `(translated_words/total_words) * 100` formula. By default the we are expecting the translations to be 80% complete and skip resources which do not meet this criteria. This value is configurable in .env using `TRANSIFEX_COMPLETION`.
+
+
 You may filter some unwanted languages by passing the `--skip-languages` or `-s` option, e.g. `bin/console mautic:language:packer -s es -s en`.
 
 You may process only some languages by passing the `--languages` or `-l` option, e.g. `bin/console mautic:language:packer -l af -l hi`.
@@ -64,3 +102,10 @@ In `https://github.com/<username>/language-packer/settings/secrets/actions/new`,
 1. `TRANSIFEX_API_TOKEN` // Generate a Transifex API token from https://app.transifex.com/user/settings/api/
 2. `TRANSIFEX_ORGANISATION`
 3. `TRANSIFEX_PROJECT`
+4. `SSH_KEY` // details below
+
+##### Generate public and private key pairs for SSH authentication
+
+1. Do `ssh-keygen -t ed25519 -C "your_email_id"`
+2. Copy private key and create a new secret with `SSH_KEY` name in `https://github.com/<username>/language-packer/settings/secrets/actions/new`
+3. Copy public key and create a new deploy key with `SSH_KEY` name in `https://github.com/<username>/language-packs/settings/keys/new`
