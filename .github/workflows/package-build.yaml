@@ -38,7 +38,17 @@ jobs:
       - name: Build packages
         run: |
           bin/console m:l:p
-          git clone -b master git@github.com:ts-navghane/language-packs.git PACKS
+
+      - name: Checkout language-packs to PACKS dir
+        uses: actions/checkout@v3
+        with:
+          repository: 'ts-navghane/language-packs'
+          ref: 'master'
+          ssh-key: '${{ secrets.SSH_KEY }}'
+          path: 'PACKS'
+
+      - name: Push packages to language-packs
+        run: |
           cp -R packages/*/* PACKS/
           cd PACKS
           jq -s '{"languages":.}' *.json > manifest.json
