@@ -154,7 +154,8 @@ class BuildPackageService
 
                     // Add the directory if it hasn't already been added
                     $directory = dirname($relativePath);
-                    if (!$zipArchive->getFromName($directory.'/') && '.' != $directory) {
+
+                    if ('.' !== $directory && !$zipArchive->getFromName($directory.'/')) {
                         $zipArchive->addEmptyDir($directory);
                     }
 
