@@ -35,7 +35,7 @@ jobs:
 
       - name: Build packages
         run: |
-          bin/console mautic:language:packer
+          bin/console mautic:language:packer --skip-languages=en
 
       - name: Checkout language-packs to PACKS dir
         uses: actions/checkout@v3
