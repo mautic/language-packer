@@ -12,14 +12,6 @@
     <server name="SHELL_VERBOSITY" value="-1"/>
     <server name="SYMFONY_PHPUNIT_REMOVE" value=""/>
     <server name="SYMFONY_PHPUNIT_VERSION" value="10.1"/>
-
-    <env name="KERNEL_CLASS" value="App\Kernel"/>
-
-    <env name="TRANSIFEX_API_TOKEN" value="not-a-real-api-token"/>
-    <env name="TRANSIFEX_ORGANISATION" value="not-a-real-organisation"/>
-    <env name="TRANSIFEX_PROJECT" value="not-a-real-project"/>
-    <env name="TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS" value="1"/>
-    <env name="TRANSIFEX_COMPLETION" value="80"/>
   </php>
   <testsuites>
     <testsuite name="Unit">
