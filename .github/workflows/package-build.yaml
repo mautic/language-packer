@@ -35,7 +35,7 @@ jobs:
 
       - name: Build packages
         run: |
-          bin/console m:l:p
+          bin/console mautic:language:packer
 
       - name: Checkout language-packs to PACKS dir
         uses: actions/checkout@v3
