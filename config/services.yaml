@@ -1,0 +1,60 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+  mlp.packages.dir: '%kernel.project_dir%/packages'
+  mlp.translations.dir: '%kernel.project_dir%/translations'
+
+services: # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+  # makes classes in src/ available to be used as services
+  # this creates a service per class whose id is the fully-qualified class name
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/Entity/'
+      - '../src/Kernel.php'
+
+  # add more service definitions when explicit configuration is needed
+  # please note that last definitions always *replace* previous ones
+
+  Psr\Http\Client\ClientInterface:
+    class: GuzzleHttp\Client
+
+  Psr\Http\Message\RequestFactoryInterface:
+    class: Http\Factory\Guzzle\RequestFactory
+
+  Psr\Http\Message\StreamFactoryInterface:
+    class: Http\Factory\Guzzle\StreamFactory
+
+  Psr\Http\Message\UriFactoryInterface:
+    class: Http\Factory\Guzzle\UriFactory
+
+  Mautic\Transifex\ConfigInterface:
+    class: Mautic\Transifex\Config
+    calls:
+      - [ 'setApiToken', [ '%env(TRANSIFEX_API_TOKEN)%' ] ]
+      - [ 'setOrganization', [ '%env(TRANSIFEX_ORGANISATION)%' ] ]
+      - [ 'setProject', [ '%env(TRANSIFEX_PROJECT)%' ] ]
+
+  Mautic\Transifex\TransifexInterface:
+    class: Mautic\Transifex\Transifex
+
+  App\Service\FileManagerService:
+    arguments:
+      $packagesDir: '%mlp.packages.dir%'
+      $translationsDir: '%mlp.translations.dir%'
+
+  App\Service\Transifex\TranslationsService:
+    arguments:
+      $downloadMaxAttempts: '%env(int:TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS)%'
+
+  App\Service\Transifex\LanguageStatsService:
+    arguments:
+      $completion: '%env(int:TRANSIFEX_COMPLETION)%'

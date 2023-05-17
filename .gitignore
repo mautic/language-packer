@@ -5,14 +5,36 @@
 .DS_Store
 /.idea
 
-# Composer installation #
-/vendor
-
 # Configuration #
 /etc/config.json
 
 # Temp storage for downloaded resources #
 /translations
+/tests/Common/translations
 
 # Storage for completed packages #
 /packages
+/tests/Common/packages
+
+/bin/*
+!/bin/console
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+.phpunit.result.cache
+###< phpunit/phpunit ###
+
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###

@@ -1,0 +1,11 @@
+parameters:
+  mlp.packages.dir: '%kernel.project_dir%/tests/Common/packages'
+  mlp.translations.dir: '%kernel.project_dir%/tests/Common/translations'
+
+services:
+  GuzzleHttp\Handler\MockHandler:
+
+  Psr\Http\Client\ClientInterface:
+    factory: [ 'App\Tests\Common\Client\ClientFactory', 'create' ]
+    arguments:
+      $handler: '@GuzzleHttp\Handler\MockHandler'

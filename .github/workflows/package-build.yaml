@@ -1,0 +1,57 @@
+name: Mautic Language Packer
+
+run-name: Action performed by ${{ github.actor }}
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+env:
+  TRANSIFEX_API_TOKEN: ${{ secrets.TRANSIFEX_API_TOKEN }}
+  TRANSIFEX_ORGANISATION: ${{ secrets.TRANSIFEX_ORGANISATION }}
+  TRANSIFEX_PROJECT: ${{ secrets.TRANSIFEX_PROJECT }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: php:8.1
+    steps:
+      - name: Install PHP zip extension
+        run: apt-get update && apt-get install -y libzip-dev && docker-php-ext-install zip
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install composer
+        run: |
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y git jq ssh unzip zip
+          mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+          composer install
+
+      - name: Build packages
+        run: |
+          bin/console mautic:language:packer --skip-languages=en
+
+      - name: Checkout language-packs to PACKS dir
+        uses: actions/checkout@v3
+        with:
+          repository: 'mautic/language-packs'
+          ref: 'master'
+          ssh-key: '${{ secrets.SSH_KEY }}'
+          path: 'PACKS'
+
+      - name: Push packages to language-packs
+        run: |
+          cp -R packages/*/* PACKS/
+          cd PACKS
+          jq -s '{"languages":.}' *.json > manifest.json
+          git config user.name "Automated build"
+          git config user.email "action@github.com"
+          git add .
+          git commit -m "automatic language build"
+          git push origin HEAD:master
