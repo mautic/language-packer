@@ -108,4 +108,4 @@ In `https://github.com/<username>/language-packer/settings/secrets/actions/new`,
 
 1. Do `ssh-keygen -t ed25519 -C "your_email_id"`
 2. Copy private key and create a new secret with `SSH_KEY` name in `https://github.com/<username>/language-packer/settings/secrets/actions/new`
-3. Copy public key and create a new deploy key with `SSH_KEY` name in `https://github.com/<username>/language-packs/settings/keys/new`
+3. Copy public key and create a new deploy key with `SSH_KEY` name in `https://github.com/<username>/language-packs/settings/keys/new`. Also check the allow write access since we want to update the existing packages.
