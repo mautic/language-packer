@@ -42,7 +42,6 @@ jobs:
         with:
           repository: 'mautic/language-packs'
           ref: 'master'
-          ssh-key: '${{ secrets.SSH_KEY }}'
           path: 'PACKS'
 
       - name: Push packages to language-packs

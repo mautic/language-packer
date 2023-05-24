@@ -102,10 +102,3 @@ In `https://github.com/<username>/language-packer/settings/secrets/actions/new`,
 1. `TRANSIFEX_API_TOKEN` // Generate a Transifex API token from https://app.transifex.com/user/settings/api/
 2. `TRANSIFEX_ORGANISATION`
 3. `TRANSIFEX_PROJECT`
-4. `SSH_KEY` // details below
-
-##### Generate public and private key pairs for SSH authentication
-
-1. Do `ssh-keygen -t ed25519 -C "your_email_id"`
-2. Copy private key and create a new secret with `SSH_KEY` name in `https://github.com/<username>/language-packer/settings/secrets/actions/new`
-3. Copy public key and create a new deploy key with `SSH_KEY` name in `https://github.com/<username>/language-packs/settings/keys/new`. Also check the allow write access since we want to update the existing packages.
