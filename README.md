@@ -102,3 +102,9 @@ In `https://github.com/<username>/language-packer/settings/secrets/actions/new`,
 1. `TRANSIFEX_API_TOKEN` // Generate a Transifex API token from https://app.transifex.com/user/settings/api/
 2. `TRANSIFEX_ORGANISATION`
 3. `TRANSIFEX_PROJECT`
+4. `GITHUB_TOKEN` // details below
+
+##### Github Token
+
+1. Create a Github token for pushing packages to language-packs repo
+2. Copy this token and create a new secret with `GITHUB_TOKEN` name in `https://github.com/<username>/language-packer/settings/secrets/actions/new`
