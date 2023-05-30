@@ -42,7 +42,7 @@ jobs:
         with:
           repository: 'mautic/language-packs'
           ref: 'master'
-          token: '${{ secrets.GITHUB_TOKEN }}'
+          token: '${{ secrets.NEW_GITHUB_TOKEN }}'
           path: 'PACKS'
 
       - name: Push packages to language-packs
