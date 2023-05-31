@@ -17,6 +17,7 @@ use Psr\Http\Message\ResponseInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 
 class MauticLanguagePackerCommandTest extends KernelTestCase
@@ -427,6 +428,91 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             ],
             ['-s' => ['es', 'en']],
         ];
+    }
+
+    public function testPackageZipFolderStructure(): void
+    {
+        $container       = self::getContainer();
+        $transifexConfig = $container->get(ConfigInterface::class);
+        $parameterBag    = $container->get('parameter_bag');
+        $packagesDir     = $parameterBag->get('mlp.packages.dir');
+
+        $organisation = $transifexConfig->getOrganization();
+        $project      = $transifexConfig->getProject();
+
+        $slug     = 'addonbundle-flashes';
+        $bundle   = 'AddonBundle';
+        $file     = 'flashes';
+        $resource = "$bundle $file";
+        $language = 'af';
+
+        $uuid = 'ab267026-4109-44ef-a13f-3c369d0e8a3c';
+
+        $mockResponses = [
+            self::getMockResponse(
+                self::buildResourcesBody($slug, $resource),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                self::getCommonHeaders()
+            ),
+            self::getMockResponse(
+                self::buildResourceLanguageStatsBody($resource, $language),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                self::getCommonHeaders()
+            ),
+            self::getMockResponse(
+                self::buildTranslationsBody($uuid),
+                Request::METHOD_POST,
+                'https://rest.api.transifex.com/resource_translations_async_downloads',
+                array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
+            ),
+            self::getMockResponse(
+                self::buildIniBody(),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                self::getCommonHeaders()
+            ),
+            self::getMockResponse(
+                self::buildLanguagesBody($language),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/languages/l%3A$language",
+                self::getCommonHeaders()
+            ),
+        ];
+
+        foreach ($mockResponses as $mockResponse) {
+            $this->mockHandler->append($mockResponse);
+        }
+
+        $this->commandTester->execute(['-s' => ['es', 'en']]);
+        Assert::assertStringContainsString('[OK] Successfully created language packages for Mautic!', $this->getFixedCommandOutput());
+
+        $packagesDirFinder = (new Finder())->in($packagesDir)->files()->name('*.zip');
+        $zipArchive        = new \ZipArchive();
+
+        $expectedFolderStructure = [
+            'af/AddonBundle',
+            'af/AddonBundle/flashes.ini',
+            'af/config.json',
+            'af/config.php',
+        ];
+        $cnt = 0;
+
+        foreach ($packagesDirFinder as $file) {
+            if (true === $zipArchive->open($file->getRealPath())) {
+                $zipArchive->extractTo($packagesDir.'/'.$file->getRelativePath());
+                $zipArchive->close();
+
+                $extractedLanguageFinder = (new Finder())->in($packagesDir.'/'.$file->getRelativePath().'/'.$language);
+
+                foreach ($extractedLanguageFinder as $extractedFile) {
+                    Assert::assertStringContainsString($expectedFolderStructure[$cnt++], $extractedFile->getRealPath());
+                }
+            }
+        }
+
+        Assert::assertSame(count($expectedFolderStructure), $cnt);
     }
 
     /**

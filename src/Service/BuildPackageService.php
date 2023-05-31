@@ -145,21 +145,21 @@ class BuildPackageService
         $zipArchive = new \ZipArchive();
 
         if ($zipArchive->open($packagesTimestampDir.'/'.$languageCode.'.zip', \ZipArchive::CREATE)) {
+            $zipArchive->addEmptyDir($languageCode);
             $languageDirFinder = (new Finder())->in($languageDir)->ignoreDotFiles(true)->ignoreVCS(true);
 
             foreach ($languageDirFinder as $file) {
-                if ($file->isFile()) {
-                    $filePath     = $file->getRealPath();
-                    $relativePath = $file->getRelativePathname();
+                $relativePath = $file->getRelativePath();
 
-                    // Add the directory if it hasn't already been added
-                    $directory = dirname($relativePath);
-
-                    if ('.' !== $directory && !$zipArchive->getFromName($directory.'/')) {
-                        $zipArchive->addEmptyDir($directory);
-                    }
-
-                    $zipArchive->addFile($filePath, $relativePath);
+                if ($file->isDir()) {
+                    // Add empty directory to the zip archive
+                    $zipArchive->addEmptyDir($languageCode.'/'.$relativePath);
+                } elseif ($file->isFile()) {
+                    // Add file to the zip archive
+                    $zipArchive->addFile(
+                        $file->getPathname(),
+                        $languageCode.'/'.$relativePath.'/'.$file->getFilename()
+                    );
                 }
             }
 
