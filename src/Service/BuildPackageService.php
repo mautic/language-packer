@@ -12,6 +12,7 @@ use Mautic\Transifex\TransifexInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Process\Process;
 
 class BuildPackageService
 {
@@ -103,7 +104,7 @@ class BuildPackageService
         // Hack so we produce exactly the same zip file on each run
         $this->produceSameZipEachTime($languageDir);
 
-        $this->createZipPackage($languageDir, $packageDTO->packagesTimestampDir, $languageCode);
+        $this->createZipPackage($packageDTO->translationsDir, $packageDTO->packagesTimestampDir, $languageCode);
 
         // Store the metadata file outside the zip too for easier manipulation with scripts
         $this->filesystem->copy(
@@ -140,30 +141,25 @@ class BuildPackageService
         $this->filesystem->touch($languageDir, strtotime('2019-01-01'));
     }
 
-    private function createZipPackage(string $languageDir, string $packagesTimestampDir, string $languageCode): void
+    private function createZipPackage(string $translationsDir, string $packagesTimestampDir, string $languageCode): void
     {
-        $zipArchive = new \ZipArchive();
+        chdir($translationsDir);
 
-        if ($zipArchive->open($packagesTimestampDir.'/'.$languageCode.'.zip', \ZipArchive::CREATE)) {
-            $zipArchive->addEmptyDir($languageCode);
-            $languageDirFinder = (new Finder())->in($languageDir)->ignoreDotFiles(true)->ignoreVCS(true);
+        $command = "find $languageCode/ -mindepth 1 | sort | zip -X ";
+        $command .= $packagesTimestampDir.'/'.$languageCode.'.zip -@ > /dev/null';
 
-            foreach ($languageDirFinder as $file) {
-                $relativePath = $file->getRelativePath();
+        $process = Process::fromShellCommandline($command);
+        $process->run();
 
-                if ($file->isDir()) {
-                    // Add empty directory to the zip archive
-                    $zipArchive->addEmptyDir($languageCode.'/'.$relativePath);
-                } elseif ($file->isFile()) {
-                    // Add file to the zip archive
-                    $zipArchive->addFile(
-                        $file->getPathname(),
-                        $languageCode.'/'.$relativePath.'/'.$file->getFilename()
-                    );
-                }
+        $lastLine = $process->getOutput();
+        $status   = $process->getExitCode();
+
+        if ($status) {
+            if ($lastLine) {
+                throw new BuildPackageException($lastLine, $status);
             }
 
-            $zipArchive->close();
+            throw new BuildPackageException(sprintf('Unknown error executing "%1$s" command', $command), $status);
         }
     }
 }
