@@ -11,7 +11,7 @@ trait ResponseBodyBuilderTrait
         return '{"data":[{"attributes":{"slug":"'.$slug.'","name":"'.$resource.'"}}]}';
     }
 
-    private static function buildResourceLanguageStatsBody(string $resource, string $language, int $translatedWords = 80, int $totalWords = 100): string
+    private static function buildResourceLanguageStatsBody(string $resource, string $language, int $translatedWords = 40, int $totalWords = 100): string
     {
         return '{"data":[{"id":"o:mautic:p:mautic:r:'.$resource.':l:'.$language.'","attributes":{"translated_words":'.$translatedWords.',"total_words":'.$totalWords.',"last_update":"2015-05-21T08:06:10Z"}}]}';
     }

@@ -187,7 +187,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             ],
         ];
 
-        yield 'fetching language statistics with less than 80 completion percent' => [
+        yield 'fetching language statistics with less than 40 completion percent' => [
             '[OK] Successfully created language packages for Mautic!',
             [
                 self::getMockResponse(
@@ -197,7 +197,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
                     self::getCommonHeaders()
                 ),
                 self::getMockResponse(
-                    self::buildResourceLanguageStatsBody($resource, $language, 60),
+                    self::buildResourceLanguageStatsBody($resource, $language, 20),
                     Request::METHOD_GET,
                     "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$slug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
                     self::getCommonHeaders()
