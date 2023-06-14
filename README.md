@@ -28,7 +28,7 @@ TRANSIFEX_API_TOKEN=not-a-real-api-token
 TRANSIFEX_ORGANISATION=not-a-real-organisation
 TRANSIFEX_PROJECT=not-a-real-project
 TRANSIFEX_DOWNLOAD_MAX_ATTEMPTS=3
-TRANSIFEX_COMPLETION=80
+TRANSIFEX_COMPLETION=40
 ###< mautic/transifex ###
 ```
 
@@ -73,7 +73,7 @@ https://developers.transifex.com/reference/get_resource-language-stats response 
   ]
 }
 ```
-Considering above JSON response, we calculate the completion percent using `(translated_words/total_words) * 100` formula. By default the we are expecting the translations to be 80% complete and skip resources which do not meet this criteria. This value is configurable in .env using `TRANSIFEX_COMPLETION`.
+Considering above JSON response, we calculate the completion percent using `(translated_words/total_words) * 100` formula. By default the we are expecting the translations to be 40% complete and skip resources which do not meet this criteria. This value is configurable in .env using `TRANSIFEX_COMPLETION`.
 
 
 You may filter some unwanted languages by passing the `--skip-languages` or `-s` option, e.g. `bin/console mautic:language:packer -s es -s en`.
