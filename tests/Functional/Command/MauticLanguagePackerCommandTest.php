@@ -430,7 +430,10 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         ];
     }
 
-    public function testPackageZipFolderStructure(): void
+    /**
+     * @dataProvider providePackageZipData
+     */
+    public function testPackageZipFolderStructure(string $iniBody, bool $removeIniFile = false): void
     {
         $container       = self::getContainer();
         $transifexConfig = $container->get(ConfigInterface::class);
@@ -468,7 +471,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
                 array_merge(['Content-Length' => ['498']], self::getCommonHeaders())
             ),
             self::getMockResponse(
-                self::buildIniBody(),
+                self::buildIniBody($iniBody),
                 Request::METHOD_GET,
                 "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
                 self::getCommonHeaders()
@@ -497,6 +500,12 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             'af/config.json',
             'af/config.php',
         ];
+
+        if ($removeIniFile) {
+            unset($expectedFolderStructure[1]);
+            $expectedFolderStructure = array_values($expectedFolderStructure);
+        }
+
         $cnt = 0;
 
         foreach ($packagesDirFinder as $file) {
@@ -513,6 +522,17 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         }
 
         Assert::assertSame(count($expectedFolderStructure), $cnt);
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public static function providePackageZipData(): iterable
+    {
+        yield ['mautic.addon.notice.reloaded="%added% addons were added, %updated% updated, and %disabled% disabled."', false];
+
+        // invalid ini should get skip in the zip
+        yield ['mautic.addon.notice.reloaded="%added% addons were added, %updated% updated, and %disabled% disabled.', true];
     }
 
     /**
