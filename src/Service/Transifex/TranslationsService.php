@@ -52,6 +52,7 @@ class TranslationsService
 
                 sleep(2 ** $attempt);
             } catch (InvalidFileException|RegexException $e) {
+                $this->filesystem->remove($filePath);
                 $this->outputErrors($logger, $filePath, $e->getMessage());
                 break;
             }
