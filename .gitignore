@@ -19,6 +19,8 @@
 /bin/*
 !/bin/console
 
+last_build
+
 ###> symfony/framework-bundle ###
 /.env.local
 /.env.local.php
