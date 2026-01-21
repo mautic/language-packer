@@ -24,7 +24,7 @@ class LanguageStatsService
     {
         // Split the name to create our file name
         $resourceNameParts = explode(' ', $resourceDTO->resourceName);
-        $bundle            = $resourceNameParts[0] ?? '';
+        $bundle            = $resourceNameParts[0] ?: '';
         $file              = $resourceNameParts[1] ?? '';
 
         if (!$bundle || !$file) {
