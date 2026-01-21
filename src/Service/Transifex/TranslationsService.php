@@ -111,7 +111,7 @@ class TranslationsService
                 // Replace the single quotes with double quotes
                 // and escape any unescaped double quotes in the value
                 $value = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]);
-                
+
                 return $match[1].'"'.$value.'"'.$match[3];
             },
             $translationContent
@@ -170,7 +170,7 @@ class TranslationsService
 
             // Check that the line passes the necessary format.
             if (!preg_match('#^[A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*".*"\s*(;.*)?$#', $line)) {
-                $errors[] = "Line $realNumber does not match format regexp: " . substr($line, 0, 100) . (strlen($line) > 100 ? '...' : '');
+                $errors[] = "Line $realNumber does not match format regexp: ".substr($line, 0, 100).(strlen($line) > 100 ? '...' : '');
                 continue;
             }
 
@@ -178,7 +178,7 @@ class TranslationsService
             preg_match_all('/(?<!\\\\)\"/', $line, $matches);
 
             if (2 !== count($matches[0])) {
-                $errors[] = "Line $realNumber doesn't have exactly 2 unescaped quotes (" . count($matches[0]) . " found): " . substr($line, 0, 100) . (strlen($line) > 100 ? '...' : '');
+                $errors[] = "Line $realNumber doesn't have exactly 2 unescaped quotes (".count($matches[0]).' found): '.substr($line, 0, 100).(strlen($line) > 100 ? '...' : '');
                 continue;
             }
 
@@ -186,7 +186,7 @@ class TranslationsService
             $key = strtoupper(trim(substr($line, 0, strpos($line, '='))));
 
             if (in_array($key, $blacklist)) {
-                $errors[] = "Line $realNumber has blacklisted key '$key': " . substr($line, 0, 100) . (strlen($line) > 100 ? '...' : '');
+                $errors[] = "Line $realNumber has blacklisted key '$key': ".substr($line, 0, 100).(strlen($line) > 100 ? '...' : '');
             }
         }
         if (false === @parse_ini_file($filePath)) {
