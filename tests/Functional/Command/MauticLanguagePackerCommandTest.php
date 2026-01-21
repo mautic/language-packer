@@ -47,15 +47,14 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
     }
 
     /**
-     * @dataProvider provideExecutionData
-     *
      * @param ResponseInterface[]     $mockResponses
      * @param array<string, string[]> $commandArguments
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('provideExecutionData')]
     public function testExecute(
         string $expectedOutput,
         array $mockResponses,
-        array $commandArguments = []
+        array $commandArguments = [],
     ): void {
         foreach ($mockResponses as $mockResponse) {
             $this->mockHandler->append($mockResponse);
@@ -473,9 +472,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         ];
     }
 
-    /**
-     * @dataProvider providePackageZipData
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('providePackageZipData')]
     public function testPackageZipFolderStructure(string $iniBody, bool $removeIniFile = false): void
     {
         $container       = self::getContainer();
@@ -602,7 +599,7 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         string $uri,
         array $headers = [],
         int $status = 200,
-        array $responseHeaders = []
+        array $responseHeaders = [],
     ): MockResponse {
         return MockResponse::fromString($body, $status, $responseHeaders)
             ->assertRequestMethod($method)
