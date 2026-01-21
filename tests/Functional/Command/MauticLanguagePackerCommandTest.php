@@ -318,6 +318,49 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             ],
         ];
 
+        $jaSlug     = 'campaignbundle-messages';
+        $jaBundle   = 'CampaignBundle';
+        $jaFile     = 'messages';
+        $jaResource = "$jaBundle $jaFile";
+        $jaLanguage = 'ja';
+        $jaIni      = file_get_contents(__DIR__.'/../../Samples/for_translation_mautic_campaignbundle-messages_ja.ini');
+
+        yield 'translation download with single quotes instead of double quotes (Japanese campaign messages)' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($jaSlug, $jaResource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($jaResource, $jaLanguage),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$jaSlug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['502']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody($jaIni),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($jaLanguage),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$jaLanguage",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
+
         yield 'fetching language details generates response exception' => [
             sprintf('Encountered error during fetching language "%1$s" details for package build.', $language),
             [
