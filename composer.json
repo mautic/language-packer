@@ -23,9 +23,9 @@
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.16",
-    "phpstan/phpstan": "^1.10",
+    "phpstan/phpstan": "^2.1",
     "phpunit/phpunit": "^10.0",
-    "rector/rector": "^0.15.24",
+    "rector/rector": "^2.3",
     "symfony/maker-bundle": "^1.48"
   },
   "config": {
@@ -70,7 +70,7 @@
       "@auto-scripts"
     ],
     "test": "bin/phpunit",
-    "phpstan": "bin/phpstan analyse",
+    "phpstan": "php -d memory_limit=1G bin/phpstan analyse",
     "cs": "bin/php-cs-fixer fix -v --dry-run --diff",
     "fixcs": "bin/php-cs-fixer fix -v --using-cache=no",
     "rector": "bin/rector process"
