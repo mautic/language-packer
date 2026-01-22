@@ -6,26 +6,26 @@
   "minimum-stability": "stable",
   "prefer-stable": true,
   "require": {
-    "php": ">=8.1",
+    "php": ">=8.2",
     "ext-ctype": "*",
     "ext-iconv": "*",
     "ext-json": "*",
     "ext-zip": "*",
-    "guzzlehttp/guzzle": "^7.5",
-    "http-interop/http-factory-guzzle": "^1.2",
+    "guzzlehttp/guzzle": "^7.10",
+    "http-interop/http-factory-guzzle": "^1.2.1",
     "mautic/transifex": "^5.0",
-    "symfony/console": "6.2.*",
-    "symfony/dotenv": "6.2.*",
+    "symfony/console": "7.4.*",
+    "symfony/dotenv": "7.4.*",
     "symfony/flex": "^2",
-    "symfony/framework-bundle": "6.2.*",
-    "symfony/runtime": "6.2.*",
-    "symfony/yaml": "6.2.*"
+    "symfony/framework-bundle": "7.4.*",
+    "symfony/runtime": "7.4.*",
+    "symfony/yaml": "7.4.*"
   },
   "require-dev": {
-    "friendsofphp/php-cs-fixer": "^3.16",
-    "phpstan/phpstan": "^1.10",
-    "phpunit/phpunit": "^10.0",
-    "rector/rector": "^0.15.24",
+    "friendsofphp/php-cs-fixer": "^3.39",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^12.5",
+    "rector/rector": "^2.3",
     "symfony/maker-bundle": "^1.48"
   },
   "config": {
@@ -48,13 +48,8 @@
     }
   },
   "replace": {
-    "symfony/polyfill-ctype": "*",
-    "symfony/polyfill-iconv": "*",
-    "symfony/polyfill-php72": "*",
-    "symfony/polyfill-php73": "*",
-    "symfony/polyfill-php74": "*",
-    "symfony/polyfill-php80": "*",
-    "symfony/polyfill-php81": "*"
+    "symfony/polyfill-php82": "*",
+    "symfony/polyfill-php83": "*"
   },
   "scripts": {
     "auto-scripts": {
@@ -70,9 +65,9 @@
       "@auto-scripts"
     ],
     "test": "bin/phpunit",
-    "phpstan": "bin/phpstan analyse",
-    "cs": "bin/php-cs-fixer fix -v --dry-run --diff",
-    "fixcs": "bin/php-cs-fixer fix -v --using-cache=no",
+    "phpstan": "php -d memory_limit=1G bin/phpstan analyse",
+    "cs": "bin/php-cs-fixer fix --allow-unsupported-php-version=yes -v --dry-run --diff",
+    "fixcs": "bin/php-cs-fixer fix --allow-unsupported-php-version=yes -v --using-cache=no",
     "rector": "bin/rector process"
   },
   "conflict": {
@@ -81,7 +76,7 @@
   "extra": {
     "symfony": {
       "allow-contrib": false,
-      "require": "6.2.*"
+      "require": "7.4.*"
     }
   }
 }

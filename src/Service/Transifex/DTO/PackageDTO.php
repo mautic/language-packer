@@ -12,7 +12,7 @@ class PackageDTO
     public function __construct(
         public readonly string $translationsDir,
         public readonly array $skipLanguages,
-        public readonly string $packagesTimestampDir
+        public readonly string $packagesTimestampDir,
     ) {
     }
 }

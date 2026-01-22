@@ -16,7 +16,7 @@ class LanguageStatsService
     public function __construct(
         private readonly TransifexInterface $transifex,
         private readonly TranslationsService $translationsService,
-        private readonly int $completion
+        private readonly int $completion,
     ) {
     }
 
@@ -24,7 +24,7 @@ class LanguageStatsService
     {
         // Split the name to create our file name
         $resourceNameParts = explode(' ', $resourceDTO->resourceName);
-        $bundle            = $resourceNameParts[0] ?? '';
+        $bundle            = $resourceNameParts[0] ?: '';
         $file              = $resourceNameParts[1] ?? '';
 
         if (!$bundle || !$file) {
@@ -79,7 +79,7 @@ class LanguageStatsService
         LoggerInterface $logger,
         array $languageStats,
         string $bundle,
-        string $file
+        string $file,
     ): void {
         foreach ($languageStats as $languageStat) {
             $attributes       = $languageStat['attributes'] ?? [];

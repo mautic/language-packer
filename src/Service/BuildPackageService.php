@@ -90,7 +90,7 @@ class BuildPackageService
         PackageDTO $packageDTO,
         array $languageAttributes,
         string $languageDir,
-        string $languageCode
+        string $languageCode,
     ): array {
         $code = $languageAttributes['code'] ?? '';
         $name = $languageAttributes['name'] ?? '';

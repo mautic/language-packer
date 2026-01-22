@@ -28,7 +28,7 @@ class MauticLanguagePackerCommand extends Command
     public function __construct(
         private readonly FileManagerService $fileManagerService,
         private readonly ResourcesService $resourcesService,
-        private readonly BuildPackageService $buildPackageService
+        private readonly BuildPackageService $buildPackageService,
     ) {
         parent::__construct();
     }
