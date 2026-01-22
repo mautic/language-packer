@@ -470,6 +470,48 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
             ],
             ['-s' => ['es', 'en']],
         ];
+
+        $crmSlug     = 'mauticcrmbundle-messages';
+        $crmBundle   = 'MauticCrmBundle';
+        $crmFile     = 'messages';
+        $crmResource = "$crmBundle $crmFile";
+        $crmIni      = file_get_contents(__DIR__.'/../../Samples/for_translation_mautic_mauticcrmbundle-messages_ja.ini');
+
+        yield 'translation download with multi-line value and single quotes (Japanese CRM messages)' => [
+            '[OK] Successfully created language packages for Mautic!',
+            [
+                self::getMockResponse(
+                    self::buildResourcesBody($crmSlug, $crmResource),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildResourceLanguageStatsBody($crmResource, $jaLanguage),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$crmSlug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildTranslationsBody($uuid),
+                    Request::METHOD_POST,
+                    'https://rest.api.transifex.com/resource_translations_async_downloads',
+                    array_merge(['Content-Length' => ['503']], self::getCommonHeaders())
+                ),
+                self::getMockResponse(
+                    self::buildIniBody($crmIni),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                    self::getCommonHeaders()
+                ),
+                self::getMockResponse(
+                    self::buildLanguagesBody($jaLanguage),
+                    Request::METHOD_GET,
+                    "https://rest.api.transifex.com/languages/l%3A$jaLanguage",
+                    self::getCommonHeaders()
+                ),
+            ],
+        ];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('providePackageZipData')]

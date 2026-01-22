@@ -106,10 +106,10 @@ class TranslationsService
         // Replace single quotes with double quotes in the pattern: key='value'
         // This fixes issues where Transifex returns single quotes instead of double quotes
         $fixedContent = preg_replace_callback(
-            '/^([A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*)\'(.*)\'(\s*(?:;.*)?)$/m',
+            '/^([A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*)\'(.*)\'(\s*(?:;.*)?)$/ms',
             static function ($match) {
                 // Replace the single quotes with double quotes
-                // and escape any unescaped double quotes in the value
+                // Escape any unescaped double quotes in the value
                 $value = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]);
 
                 return $match[1].'"'.$value.'"'.$match[3];
@@ -126,14 +126,18 @@ class TranslationsService
 
     private function escapeQuotes(string $translationContent): string
     {
-        // Split line into key=" value "end
+        // Process each value, including multi-line ones
+        // The /s flag makes . match newlines to handle multi-line values
         $replaceCallback = preg_replace_callback(
-            '/(^.*?=\s*")(.*".*)("\s*(;.*)?$)/m',
+            '/^([A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*")(.*)("(\s*;.*)?)$/ms',
             static function ($match) {
-                // replace unescaped " in value and recombine into full line
-                $esc = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]);
+                // Strip newlines from the value (INI format doesn't support multi-line values)
+                $value = str_replace(["\r\n", "\r", "\n"], ' ', $match[2]);
 
-                return $match[1].$esc.$match[3];
+                // Replace unescaped " in value
+                $value = preg_replace('/(?<!\\\\)"/', '\\"', $value);
+
+                return $match[1].$value.$match[3];
             },
             $translationContent
         );
