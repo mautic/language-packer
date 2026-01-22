@@ -12,7 +12,7 @@ class TranslationDTO
         public readonly string $language,
         public readonly string $bundle,
         public readonly string $file,
-        public readonly string $lastUpdate
+        public readonly string $lastUpdate,
     ) {
     }
 }

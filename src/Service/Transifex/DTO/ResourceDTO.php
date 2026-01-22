@@ -16,7 +16,7 @@ class ResourceDTO
         public readonly array $languages,
         public readonly bool $byPassCompletion,
         public string $resourceSlug = '',
-        public string $resourceName = ''
+        public string $resourceName = '',
     ) {
     }
 }

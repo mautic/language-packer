@@ -15,7 +15,7 @@ class ResourcesService
 {
     public function __construct(
         private readonly TransifexInterface $transifex,
-        private readonly LanguageStatsService $languageStatsService
+        private readonly LanguageStatsService $languageStatsService,
     ) {
     }
 

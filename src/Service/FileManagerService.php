@@ -11,7 +11,7 @@ class FileManagerService
     public function __construct(
         private readonly Filesystem $filesystem,
         private readonly string $packagesDir,
-        private readonly string $translationsDir
+        private readonly string $translationsDir,
     ) {
     }
 

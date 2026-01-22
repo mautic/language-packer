@@ -20,7 +20,7 @@ class TranslationsService
     public function __construct(
         private readonly TransifexInterface $transifex,
         private readonly Filesystem $filesystem,
-        private readonly int $downloadMaxAttempts
+        private readonly int $downloadMaxAttempts,
     ) {
     }
 
