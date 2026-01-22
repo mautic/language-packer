@@ -514,6 +514,94 @@ class MauticLanguagePackerCommandTest extends KernelTestCase
         ];
     }
 
+    public function testMultiLineValueProcessing(): void
+    {
+        $container       = self::getContainer();
+        $transifexConfig = $container->get(ConfigInterface::class);
+        $translationsDir = $container->get('parameter_bag')->get('mlp.translations.dir');
+
+        $organisation = $transifexConfig->getOrganization();
+        $project      = $transifexConfig->getProject();
+
+        $crmSlug     = 'mauticcrmbundle-messages';
+        $crmBundle   = 'MauticCrmBundle';
+        $crmFile     = 'messages';
+        $crmResource = "$crmBundle $crmFile";
+        $jaLanguage  = 'ja';
+        $crmIni      = file_get_contents(__DIR__.'/../../Samples/for_translation_mautic_mauticcrmbundle-messages_ja.ini');
+        $uuid        = 'ab267026-4109-44ef-a13f-3c369d0e8a3c';
+
+        $mockResponses = [
+            self::getMockResponse(
+                self::buildResourcesBody($crmSlug, $crmResource),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/resources?filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                self::getCommonHeaders()
+            ),
+            self::getMockResponse(
+                self::buildResourceLanguageStatsBody($crmResource, $jaLanguage),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/resource_language_stats?filter%5Bresource%5D=o%3A$organisation%3Ap%3A$project%3Ar%3A$crmSlug&filter%5Bproject%5D=o%3A$organisation%3Ap%3A$project",
+                self::getCommonHeaders()
+            ),
+            self::getMockResponse(
+                self::buildTranslationsBody($uuid),
+                Request::METHOD_POST,
+                'https://rest.api.transifex.com/resource_translations_async_downloads',
+                array_merge(['Content-Length' => ['503']], self::getCommonHeaders())
+            ),
+            self::getMockResponse(
+                self::buildIniBody($crmIni),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/resource_translations_async_downloads/$uuid",
+                self::getCommonHeaders()
+            ),
+            self::getMockResponse(
+                self::buildLanguagesBody($jaLanguage),
+                Request::METHOD_GET,
+                "https://rest.api.transifex.com/languages/l%3A$jaLanguage",
+                self::getCommonHeaders()
+            ),
+        ];
+
+        foreach ($mockResponses as $mockResponse) {
+            $this->mockHandler->append($mockResponse);
+        }
+
+        $this->commandTester->execute([]);
+        Assert::assertStringContainsString('[OK] Successfully created language packages for Mautic!', $this->getFixedCommandOutput());
+
+        // Verify the output file
+        $outputFile = "$translationsDir/$jaLanguage/$crmBundle/$crmFile.ini";
+        Assert::assertFileExists($outputFile);
+
+        $content = file_get_contents($outputFile);
+        $lines   = explode("\n", $content);
+
+        // Verify multi-line value was collapsed to single line with double quotes
+        $multiLineKey = 'mautic.salesforce.error.opt-out_permission.message';
+        $found        = false;
+        foreach ($lines as $line) {
+            if (str_starts_with($line, $multiLineKey)) {
+                $found = true;
+                // Should have double quotes, not single
+                Assert::assertStringContainsString('"', $line);
+                Assert::assertStringNotContainsString("'Salesforceの権限", $line);
+                // Should be on single line (no embedded newlines)
+                Assert::assertStringContainsString(' <a href', $line);
+                break;
+            }
+        }
+        Assert::assertTrue($found, "Multi-line key '$multiLineKey' not found in output");
+
+        // Verify file has proper line breaks between entries
+        Assert::assertGreaterThan(80, count($lines), 'File should have multiple lines');
+
+        // Verify at least some lines are non-empty (not all collapsed)
+        $nonEmptyLines = array_filter($lines, fn ($line) => '' !== trim($line));
+        Assert::assertGreaterThan(70, count($nonEmptyLines), 'File should have many non-empty lines');
+    }
+
     #[\PHPUnit\Framework\Attributes\DataProvider('providePackageZipData')]
     public function testPackageZipFolderStructure(string $iniBody, bool $removeIniFile = false): void
     {
