@@ -74,10 +74,10 @@ class TranslationsService
                 $promise,
                 $logger
             ) {
-                $filePath           = $promise->getFilePath();
-                $translationContent = $response->getBody()->__toString();
-                $fixedContent       = $this->fixSingleQuotes($translationContent);
-                $escapedContent     = $this->escapeQuotes($fixedContent);
+                $filePath                = $promise->getFilePath();
+                $translationContent      = $response->getBody()->__toString();
+                $contentWithoutMultiline = $this->stripNewlinesFromValues($translationContent);
+                $escapedContent          = $this->escapeQuotes($contentWithoutMultiline);
 
                 // Write the file to the system
                 $this->filesystem->dumpFile($filePath, $escapedContent);
@@ -101,43 +101,79 @@ class TranslationsService
         );
     }
 
-    private function fixSingleQuotes(string $translationContent): string
+    private function stripNewlinesFromValues(string $translationContent): string
     {
-        // Replace single quotes with double quotes in the pattern: key='value'
-        // This fixes issues where Transifex returns single quotes instead of double quotes
-        $fixedContent = preg_replace_callback(
-            '/^([A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*)\'(.*)\'(\s*(?:;.*)?)$/ms',
-            static function ($match) {
-                // Replace the single quotes with double quotes
-                // Escape any unescaped double quotes in the value
-                $value = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]);
+        // Strip newlines from both single and double quoted values
+        // This handles multi-line values regardless of quote type (INI format doesn't support multi-line values)
+        // Use PREG_SET_ORDER to process each match independently
+        $lines  = explode("\n", $translationContent);
+        $result = [];
+        $i      = 0;
 
-                return $match[1].'"'.$value.'"'.$match[3];
-            },
-            $translationContent
-        );
+        while ($i < count($lines)) {
+            $line = $lines[$i];
 
-        if (null === $fixedContent) {
-            throw new RegexException('RegExp failed while trying to fix single quotes.');
+            // Check if line starts a quoted value
+            if (preg_match('/^([A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*)(["\'])(.*)$/s', $line, $match)) {
+                $key   = $match[1];
+                $quote = $match[2];
+                $value = $match[3];
+
+                // Check if quote is closed on this line
+                if (preg_match('/^(.*?[^\\\\])'.$quote.'(\s*(?:;.*)?)$/s', $value, $valueMatch)) {
+                    // Single line value - normalize to double quotes if needed
+                    if ("'" === $quote) {
+                        $singleLineValue = $valueMatch[1];
+                        $singleLineValue = preg_replace('/(?<!\\\\)"/', '\\"', $singleLineValue);
+                        $result[]        = $key.'"'.$singleLineValue.'"'.$valueMatch[2];
+                    } else {
+                        $result[] = $line;
+                    }
+                    ++$i;
+                } else {
+                    // Multi-line value - collect lines until closing quote
+                    $fullValue = $value;
+                    ++$i;
+                    while ($i < count($lines)) {
+                        $fullValue .= ' '.$lines[$i];
+                        if (preg_match('/'.$quote.'(\s*(?:;.*)?)$/s', $lines[$i])) {
+                            break;
+                        }
+                        ++$i;
+                    }
+                    // Strip the closing quote and any trailing content (comments)
+                    if (preg_match('/^(.*?[^\\\\])'.$quote.'(\s*(?:;.*)?)$/s', $fullValue, $valueMatch)) {
+                        $fullValue       = $valueMatch[1];
+                        $trailingContent = $valueMatch[2];
+                    } else {
+                        $trailingContent = '';
+                    }
+                    // Normalize to double quotes and escape any internal double quotes if needed
+                    if ("'" === $quote) {
+                        $fullValue = preg_replace('/(?<!\\\\)"/', '\\"', $fullValue);
+                    }
+                    $result[] = $key.'"'.$fullValue.'"'.$trailingContent;
+                    ++$i;
+                }
+            } else {
+                $result[] = $line;
+                ++$i;
+            }
         }
 
-        return $fixedContent;
+        return implode("\n", $result);
     }
 
     private function escapeQuotes(string $translationContent): string
     {
-        // Process each value, including multi-line ones
-        // The /s flag makes . match newlines to handle multi-line values
+        // Split line into key=" value "end
         $replaceCallback = preg_replace_callback(
-            '/^([A-Za-z][A-Za-z0-9_\-\.]*\s*=\s*")(.*)("(\s*;.*)?)$/ms',
+            '/(^.*?=\s*")(.*".*)("\s*(;.*)?$)/m',
             static function ($match) {
-                // Strip newlines from the value (INI format doesn't support multi-line values)
-                $value = str_replace(["\r\n", "\r", "\n"], ' ', $match[2]);
+                // replace unescaped " in value and recombine into full line
+                $esc = preg_replace('/(?<!\\\\)"/', '\\"', $match[2]);
 
-                // Replace unescaped " in value
-                $value = preg_replace('/(?<!\\\\)"/', '\\"', $value);
-
-                return $match[1].$value.$match[3];
+                return $match[1].$esc.$match[3];
             },
             $translationContent
         );
