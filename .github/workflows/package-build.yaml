@@ -42,7 +42,7 @@ jobs:
           composer install
 
       - name: Build language packages
-        run: bin/console mautic:language:packer --skip-languages=en
+        run: php -d memory_limit=512M bin/console mautic:language:packer --skip-languages=en
 
       - name: Update build timestamp in last_build file
         run: |
